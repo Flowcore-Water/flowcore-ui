@@ -10,3 +10,4 @@ export type { SidebarShellProps } from './SidebarShell';
 export { FLOWCORE_APPS } from './appRegistry';
 export { VersionBanner } from './VersionBanner';
 export type { VersionBannerProps } from './VersionBanner';
+//# sourceMappingURL=index.d.ts.map

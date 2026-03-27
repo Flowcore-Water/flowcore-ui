@@ -1,0 +1,1 @@
+{"version":3,"file":"VersionBanner.d.ts","sourceRoot":"","sources":["../src/VersionBanner.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAmD,MAAM,OAAO,CAAC;AAGxE,MAAM,WAAW,kBAAkB;IACjC,yEAAyE;IACzE,UAAU,CAAC,EAAE,MAAM,CAAC;IACpB,wDAAwD;IACxD,cAAc,CAAC,EAAE,MAAM,CAAC;IACxB,kFAAkF;IAClF,cAAc,CAAC,EAAE,MAAM,CAAC;CACzB;AAED,eAAO,MAAM,aAAa,EAAE,KAAK,CAAC,EAAE,CAAC,kBAAkB,CAiGtD,CAAC"}

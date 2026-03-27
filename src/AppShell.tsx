@@ -9,6 +9,8 @@ import type { AppInfo } from './AppLauncher';
 export interface NavItem {
   to: string;
   label: string;
+  /** Optional icon (emoji string or ReactNode) shown before the label */
+  icon?: string;
 }
 
 export interface AppShellUser {
