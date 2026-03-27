@@ -30,8 +30,8 @@ const RetroFlowcoreText: React.FC = () => (
   <img
     src="/flowcore-retro.png"
     alt="FLOWCORE"
-    className="h-10"
-    style={{ filter: 'drop-shadow(0 0 8px rgba(5, 217, 232, 0.4))' }}
+    className="w-auto"
+    style={{ height: '40px', filter: 'drop-shadow(0 0 8px rgba(5, 217, 232, 0.4))' }}
   />
 );
 
@@ -72,8 +72,8 @@ export const AppShell: React.FC<AppShellProps> = ({
                   <img
                     src="/retro-favicon2.png"
                     alt="Flowcore"
-                    className="h-12 md:h-14 w-auto"
-                    style={{ borderRadius: '4px' }}
+                    className="w-auto"
+                    style={{ height: '40px', borderRadius: '4px' }}
                   />
                   <RetroFlowcoreText />
                 </div>
@@ -81,7 +81,8 @@ export const AppShell: React.FC<AppShellProps> = ({
                 <img
                   src="/flowcore-logo.svg"
                   alt="Flowcore"
-                  className="h-10 md:h-16 w-auto"
+                  className="w-auto"
+                  style={{ height: '40px' }}
                 />
               )}
             </a>
