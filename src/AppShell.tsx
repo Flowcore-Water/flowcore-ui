@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Link, Outlet } from 'react-router-dom';
 import { useTheme } from './ThemeContext';
 import { AppLauncher } from './AppLauncher';
 import { VersionBanner } from './VersionBanner';
@@ -22,6 +22,7 @@ export interface AppShellProps {
   appTitle: string;
   navItems: NavItem[];
   user?: AppShellUser;
+  topBanner?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -40,6 +41,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   appTitle,
   navItems,
   user,
+  topBanner,
   children,
 }) => {
   const { t, isRetro, toggleTheme } = useTheme();
@@ -54,8 +56,11 @@ export const AppShell: React.FC<AppShellProps> = ({
     }
   }, [isRetro]);
 
+  const hasNav = navItems.length > 0 || !!user;
+
   return (
     <div className="flex h-screen flex-col" style={{ background: t.pageBg }}>
+      {topBanner}
       <VersionBanner />
 
       {/* Navigation Bar */}
@@ -66,14 +71,14 @@ export const AppShell: React.FC<AppShellProps> = ({
         <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4">
           {/* Logo + App Launcher group — anchored left */}
           <div className="flex items-center gap-3 shrink-0">
-            <a href="/" className="shrink-0">
+            <Link to="/" className="shrink-0">
               {isRetro ? (
                 <div className="flex items-center gap-2">
                   <img
                     src="/retro-favicon2.png"
                     alt="Flowcore"
-                    className="w-auto"
-                    style={{ height: '40px', borderRadius: '4px' }}
+                    className="h-12 md:h-14 w-auto"
+                    style={{ borderRadius: '4px' }}
                   />
                   <RetroFlowcoreText />
                 </div>
@@ -81,11 +86,10 @@ export const AppShell: React.FC<AppShellProps> = ({
                 <img
                   src="/flowcore-logo.svg"
                   alt="Flowcore"
-                  className="w-auto"
-                  style={{ height: '40px' }}
+                  className="h-10 md:h-16 w-auto"
                 />
               )}
-            </a>
+            </Link>
 
             {/* App Launcher + App Title — bounding box with vertical divider */}
             <div
@@ -107,7 +111,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-6">
+          {hasNav && <div className="hidden lg:flex items-center gap-6">
             {navItems.map((item) => (
               <ShellNavItem
                 key={item.to}
@@ -172,10 +176,10 @@ export const AppShell: React.FC<AppShellProps> = ({
                 </button>
               </div>
             )}
-          </div>
+          </div>}
 
           {/* Mobile Hamburger */}
-          <button
+          {hasNav && <button
             className="lg:hidden p-2 rounded-lg"
             style={{ color: t.textSecondary }}
             onClick={() => setMenuOpen(!menuOpen)}
@@ -203,11 +207,11 @@ export const AppShell: React.FC<AppShellProps> = ({
                 </>
               )}
             </svg>
-          </button>
+          </button>}
         </div>
 
         {/* Mobile Menu Dropdown */}
-        {menuOpen && (
+        {menuOpen && hasNav && (
           <div
             className="lg:hidden border-t px-4 py-4 flex flex-col gap-4"
             style={{ background: t.navBg, borderColor: t.border }}

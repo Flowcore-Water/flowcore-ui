@@ -53,6 +53,10 @@ export interface ThemeColors {
   tableHeaderBg: string;
   expandedRowBg: string;
 
+  // Score / severity indicators
+  scoreHot: string;
+  scoreWarm: string;
+
   // Inputs & buttons
   inputBg: string;
   inputBorder: string;
@@ -99,6 +103,9 @@ export const defaultTheme: ThemeColors = {
   tableHeaderBg: '#0e1525',
   expandedRowBg: '#0a101c',
 
+  scoreHot: '#f87171',
+  scoreWarm: '#fbbf24',
+
   inputBg: '#0c1220',
   inputBorder: '#536178',
   buttonBg: '#1e293b',
@@ -143,6 +150,9 @@ export const retroTheme: ThemeColors = {
 
   tableHeaderBg: '#0f0328',
   expandedRowBg: '#0a0118',
+
+  scoreHot: '#ff4444',
+  scoreWarm: '#f5a623',
 
   inputBg: '#0d0221',
   inputBorder: '#6b3a9e',
