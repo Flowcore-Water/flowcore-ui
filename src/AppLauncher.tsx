@@ -12,9 +12,11 @@ export interface AppLauncherProps {
   apps: AppInfo[];
   currentAppSlug?: string;
   theme: ThemeColors;
+  /** Which edge of the button the dropdown aligns to. Default 'right'. */
+  dropdownAlign?: 'left' | 'right';
 }
 
-export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, theme: t }) => {
+export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, theme: t, dropdownAlign = 'right' }) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -68,7 +70,7 @@ export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, 
         <div
           style={{
             position: 'absolute',
-            right: 0,
+            ...(dropdownAlign === 'left' ? { left: 0 } : { right: 0 }),
             top: '100%',
             marginTop: 8,
             borderRadius: 12,
