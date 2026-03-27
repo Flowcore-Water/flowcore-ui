@@ -8,9 +8,9 @@ export const FLOWCORE_APPS: AppInfo[] = [
     url: 'https://ops.flowcorewater.com',
   },
   {
-    slug: 'datadog',
-    display_name: 'DataDog',
-    url: 'https://datadog.flowcorewater.com',
+    slug: 'admin',
+    display_name: 'Admin',
+    url: 'https://flowcore-identity.web.app',
   },
   {
     slug: 'training-tracker',
