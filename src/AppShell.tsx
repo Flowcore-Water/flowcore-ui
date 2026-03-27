@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
-import { useTheme } from './ThemeContext';
+import type { ThemeColors } from './theme';
 import { AppLauncher } from './AppLauncher';
 import { VersionBanner } from './VersionBanner';
 import { FLOWCORE_APPS } from './appRegistry';
+import type { AppInfo } from './AppLauncher';
 
 export interface NavItem {
   to: string;
@@ -18,54 +19,46 @@ export interface AppShellUser {
 }
 
 export interface AppShellProps {
+  /** Color tokens — pass from useTheme() or supply your own */
+  theme: ThemeColors;
+  /** App identifier for the launcher highlight */
   appSlug: string;
+  /** Display name shown next to the launcher */
   appTitle: string;
+  /** Navigation links rendered in the header (desktop) or hamburger (mobile) */
   navItems: NavItem[];
+  /** Authenticated user info + sign-out callback */
   user?: AppShellUser;
+  /** Logo element rendered at the left of the nav bar */
+  logo?: React.ReactNode;
+  /** Optional widget rendered between nav links and user menu (e.g. theme toggle) */
+  themeToggle?: React.ReactNode;
+  /** Optional background layer rendered behind main content (e.g. synthwave) */
+  background?: React.ReactNode;
+  /** Banner rendered above the nav inside the viewport container */
   topBanner?: React.ReactNode;
+  /** App registry for the launcher — defaults to FLOWCORE_APPS */
+  apps?: AppInfo[];
   children?: React.ReactNode;
 }
 
-/** Rasterized chrome "FLOWCORE" image for retro mode */
-const RetroFlowcoreText: React.FC = () => (
-  <img
-    src="/flowcore-retro.png"
-    alt="FLOWCORE"
-    className="appshell-retro-text"
-    style={{ height: '40px', width: 'auto', filter: 'drop-shadow(0 0 8px rgba(5, 217, 232, 0.4))' }}
-  />
-);
-
 /**
- * Self-contained responsive styles for AppShell.
- * We use a <style> block instead of Tailwind responsive prefixes because
- * consuming apps' Tailwind scanners do not scan node_modules, so classes
- * like lg:flex and md:h-16 would never generate CSS.
+ * Self-contained responsive styles.
+ * Uses a <style> block instead of Tailwind responsive prefixes because
+ * consuming apps' Tailwind scanners do not scan node_modules.
  */
 const APPSHELL_STYLES = `
-  /* Logo responsive sizing */
-  .appshell-logo-default { height: 40px; width: auto; }
-  .appshell-logo-retro  { height: 48px; width: auto; border-radius: 4px; }
+  .appshell-logo { height: 40px; width: auto; }
 
-  /* App title + divider — hidden on narrow, visible on sm+ */
   .appshell-divider   { display: none; width: 1px; align-self: stretch; }
   .appshell-app-title  { display: none; padding: 6px 12px; font-size: 12px;
     font-family: ui-monospace, monospace; text-transform: uppercase;
     letter-spacing: 0.05em; white-space: nowrap; }
 
-  /* Nav bar padding */
   .appshell-nav-inner { padding: 12px 16px; }
-
-  /* Desktop nav — hidden by default, flex row at lg */
   .appshell-desktop-nav { display: none; align-items: center; gap: 24px; }
-
-  /* Hamburger — visible by default, hidden at lg */
   .appshell-hamburger { display: block; }
-
-  /* Mobile dropdown — visible by default when open, hidden at lg */
   .appshell-mobile-dropdown { display: flex; }
-
-  /* Content area padding */
   .appshell-content { padding: 24px 16px; }
 
   @media (min-width: 640px) {
@@ -74,8 +67,7 @@ const APPSHELL_STYLES = `
   }
 
   @media (min-width: 768px) {
-    .appshell-logo-default { height: 64px; }
-    .appshell-logo-retro  { height: 56px; }
+    .appshell-logo        { height: 64px; }
     .appshell-nav-inner   { padding: 16px 24px; }
     .appshell-content     { padding: 32px 24px; }
   }
@@ -88,29 +80,26 @@ const APPSHELL_STYLES = `
 `;
 
 export const AppShell: React.FC<AppShellProps> = ({
+  theme: t,
   appSlug,
   appTitle,
   navItems,
   user,
+  logo,
+  themeToggle,
+  background,
   topBanner,
+  apps = FLOWCORE_APPS,
   children,
 }) => {
-  const { t, isRetro, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Swap favicon based on theme
-  useEffect(() => {
-    const link = document.getElementById('favicon') as HTMLLinkElement | null;
-    if (link) {
-      link.href = isRetro ? '/retro-favicon2.png' : '/flowcore-logo.svg';
-      link.type = isRetro ? 'image/png' : 'image/svg+xml';
-    }
-  }, [isRetro]);
+  const defaultLogo = (
+    <img src="/flowcore-logo.svg" alt="Flowcore" className="appshell-logo" />
+  );
 
   return (
-    <div
-      style={{ display: 'flex', height: '100vh', flexDirection: 'column', background: t.pageBg }}
-    >
+    <div style={{ display: 'flex', height: '100vh', flexDirection: 'column', background: t.pageBg }}>
       <style>{APPSHELL_STYLES}</style>
       {topBanner}
       <VersionBanner />
@@ -129,28 +118,12 @@ export const AppShell: React.FC<AppShellProps> = ({
           className="appshell-nav-inner"
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
         >
-          {/* Logo + App Launcher group — anchored left */}
+          {/* Logo + App Launcher group */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
             <Link to="/" style={{ flexShrink: 0 }}>
-              {isRetro ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <img
-                    src="/retro-favicon2.png"
-                    alt="Flowcore"
-                    className="appshell-logo-retro"
-                  />
-                  <RetroFlowcoreText />
-                </div>
-              ) : (
-                <img
-                  src="/flowcore-logo.svg"
-                  alt="Flowcore"
-                  className="appshell-logo-default"
-                />
-              )}
+              {logo ?? defaultLogo}
             </Link>
 
-            {/* App Launcher + App Title — bounding box with vertical divider */}
             <div
               style={{
                 display: 'flex',
@@ -160,15 +133,9 @@ export const AppShell: React.FC<AppShellProps> = ({
                 background: t.surfaceHover,
               }}
             >
-              <AppLauncher apps={FLOWCORE_APPS} currentAppSlug={appSlug} />
-              <div
-                className="appshell-divider"
-                style={{ background: t.border }}
-              />
-              <span
-                className="appshell-app-title"
-                style={{ color: t.accent }}
-              >
+              <AppLauncher apps={apps} currentAppSlug={appSlug} theme={t} />
+              <div className="appshell-divider" style={{ background: t.border }} />
+              <span className="appshell-app-title" style={{ color: t.accent }}>
                 {appTitle}
               </span>
             </div>
@@ -177,44 +144,11 @@ export const AppShell: React.FC<AppShellProps> = ({
           {/* Desktop Navigation */}
           <div className="appshell-desktop-nav">
             {navItems.map((item) => (
-              <ShellNavItem
-                key={item.to}
-                to={item.to}
-                label={item.label}
-                onClick={() => setMenuOpen(false)}
-              />
+              <ShellNavItem key={item.to} to={item.to} label={item.label} theme={t} onClick={() => setMenuOpen(false)} />
             ))}
 
-            {/* Theme Toggle Pill */}
-            <button
-              onClick={toggleTheme}
-              style={{
-                borderRadius: '9999px',
-                padding: '6px 12px',
-                fontSize: '12px',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                transition: 'all 150ms',
-                background: isRetro
-                  ? 'rgba(255, 42, 109, 0.15)'
-                  : 'rgba(139, 92, 246, 0.12)',
-                border: `1px solid ${
-                  isRetro
-                    ? 'rgba(255, 42, 109, 0.4)'
-                    : 'rgba(139, 92, 246, 0.3)'
-                }`,
-                color: isRetro ? '#ff2a6d' : '#a78bfa',
-                boxShadow: isRetro
-                  ? '0 0 12px rgba(255, 42, 109, 0.2)'
-                  : 'none',
-                cursor: 'pointer',
-              }}
-            >
-              {isRetro ? '// Default' : '// Go Retro'}
-            </button>
+            {themeToggle}
 
-            {/* User Menu (optional) */}
             {user && (
               <div
                 style={{
@@ -226,20 +160,10 @@ export const AppShell: React.FC<AppShellProps> = ({
                 }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                  <p
-                    style={{ fontSize: '14px', fontWeight: 600, color: t.textPrimary, margin: 0 }}
-                  >
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: t.textPrimary, margin: 0 }}>
                     {user.displayName}
                   </p>
-                  <p
-                    style={{
-                      fontSize: '12px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      color: t.accent,
-                      margin: 0,
-                    }}
-                  >
+                  <p style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: t.accent, margin: 0 }}>
                     {user.role}
                   </p>
                 </div>
@@ -254,7 +178,6 @@ export const AppShell: React.FC<AppShellProps> = ({
                     background: t.buttonBg,
                     color: t.buttonText,
                     cursor: 'pointer',
-                    transition: 'background 150ms',
                   }}
                 >
                   Sign Out
@@ -270,15 +193,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label="Toggle menu"
           >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               {menuOpen ? (
                 <>
                   <line x1="6" y1="6" x2="18" y2="18" />
@@ -299,92 +214,25 @@ export const AppShell: React.FC<AppShellProps> = ({
         {menuOpen && (
           <div
             className="appshell-mobile-dropdown"
-            style={{
-              flexDirection: 'column',
-              gap: '16px',
-              borderTop: `1px solid ${t.border}`,
-              padding: '16px',
-              background: t.navBg,
-            }}
+            style={{ flexDirection: 'column', gap: '16px', borderTop: `1px solid ${t.border}`, padding: '16px', background: t.navBg }}
           >
             {navItems.map((item) => (
-              <ShellNavItem
-                key={item.to}
-                to={item.to}
-                label={item.label}
-                onClick={() => setMenuOpen(false)}
-              />
+              <ShellNavItem key={item.to} to={item.to} label={item.label} theme={t} onClick={() => setMenuOpen(false)} />
             ))}
 
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingTop: '12px',
-                borderTop: `1px solid ${t.border}`,
-              }}
-            >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: `1px solid ${t.border}` }}>
               {user && (
                 <div>
-                  <p
-                    style={{ fontSize: '14px', fontWeight: 600, color: t.textPrimary, margin: 0 }}
-                  >
-                    {user.displayName}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: '12px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      color: t.accent,
-                      margin: 0,
-                    }}
-                  >
-                    {user.role}
-                  </p>
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: t.textPrimary, margin: 0 }}>{user.displayName}</p>
+                  <p style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: t.accent, margin: 0 }}>{user.role}</p>
                 </div>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button
-                  onClick={toggleTheme}
-                  style={{
-                    borderRadius: '9999px',
-                    padding: '6px 12px',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    background: isRetro
-                      ? 'rgba(255, 42, 109, 0.15)'
-                      : 'rgba(139, 92, 246, 0.12)',
-                    border: `1px solid ${
-                      isRetro
-                        ? 'rgba(255, 42, 109, 0.4)'
-                        : 'rgba(139, 92, 246, 0.3)'
-                    }`,
-                    color: isRetro ? '#ff2a6d' : '#a78bfa',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {isRetro ? '// Default' : '// Retro'}
-                </button>
+                {themeToggle}
                 {user && (
                   <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      user.onSignOut();
-                    }}
-                    style={{
-                      borderRadius: '8px',
-                      border: `1px solid ${t.buttonBorder}`,
-                      padding: '8px 16px',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      background: t.buttonBg,
-                      color: t.buttonText,
-                      cursor: 'pointer',
-                    }}
+                    onClick={() => { setMenuOpen(false); user.onSignOut(); }}
+                    style={{ borderRadius: '8px', border: `1px solid ${t.buttonBorder}`, padding: '8px 16px', fontSize: '14px', fontWeight: 500, background: t.buttonBg, color: t.buttonText, cursor: 'pointer' }}
                   >
                     Sign Out
                   </button>
@@ -397,8 +245,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
       {/* Main Content */}
       <main style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
-        {/* Synthwave background for retro theme */}
-        {isRetro && <SynthwaveBackground />}
+        {background}
         <div
           className="appshell-content"
           style={{ maxWidth: '80rem', marginLeft: 'auto', marginRight: 'auto', width: '100%', position: 'relative', zIndex: 1 }}
@@ -410,17 +257,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   );
 };
 
-function ShellNavItem({
-  to,
-  label,
-  onClick,
-}: {
-  to: string;
-  label: string;
-  onClick?: () => void;
-}) {
-  const { t } = useTheme();
-
+function ShellNavItem({ to, label, theme: t, onClick }: { to: string; label: string; theme: ThemeColors; onClick?: () => void }) {
   return (
     <NavLink
       to={to}
@@ -434,49 +271,13 @@ function ShellNavItem({
         textDecoration: 'none',
         color: isActive ? t.accent : t.textSecondary,
       })}
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.color = t.accent)
-      }
+      onMouseEnter={(e) => (e.currentTarget.style.color = t.accent)}
       onMouseLeave={(e) => {
         const isActive = e.currentTarget.getAttribute('aria-current') === 'page';
-        if (!isActive) {
-          e.currentTarget.style.color = t.textSecondary;
-        }
+        if (!isActive) e.currentTarget.style.color = t.textSecondary;
       }}
     >
       {label}
     </NavLink>
   );
 }
-
-/** Synthwave background with gradient overlay for readability */
-const SynthwaveBackground: React.FC = () => (
-  <div
-    style={{
-      position: 'fixed',
-      inset: 0,
-      overflow: 'hidden',
-      pointerEvents: 'none',
-      zIndex: 0,
-    }}
-  >
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        backgroundImage: 'url(/synthwave.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    />
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background:
-          'linear-gradient(180deg, rgba(13, 2, 33, 0.2) 0%, rgba(13, 2, 33, 0.5) 40%, rgba(13, 2, 33, 0.8) 70%, rgba(13, 2, 33, 0.95) 100%)',
-      }}
-    />
-  </div>
-);

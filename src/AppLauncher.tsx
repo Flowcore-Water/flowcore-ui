@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useTheme } from './ThemeContext';
+import type { ThemeColors } from './theme';
 
 export interface AppInfo {
   slug: string;
@@ -11,12 +11,12 @@ export interface AppInfo {
 export interface AppLauncherProps {
   apps: AppInfo[];
   currentAppSlug?: string;
+  theme: ThemeColors;
 }
 
-export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug }) => {
+export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, theme: t }) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { t } = useTheme();
 
   useEffect(() => {
     if (!open) return;
@@ -148,7 +148,7 @@ const GridIcon: React.FC<GridIconProps> = ({ color, size = 20 }) => (
 
 interface AppIconProps {
   app: AppInfo;
-  theme: ReturnType<typeof useTheme>['t'];
+  theme: ThemeColors;
 }
 
 const AppIcon: React.FC<AppIconProps> = ({ app, theme }) => {
