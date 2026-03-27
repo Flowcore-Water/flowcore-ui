@@ -42,16 +42,23 @@ export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, 
         onClick={() => setOpen((prev) => !prev)}
         aria-label="App launcher"
         aria-expanded={open}
-        className="flex items-center justify-center rounded-lg p-2 transition-colors"
         style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 8,
+          padding: 8,
+          transition: 'background 150ms',
           background: open ? t.surfaceHover : 'transparent',
           color: t.textSecondary,
+          border: 'none',
+          cursor: 'pointer',
         }}
         onMouseEnter={(e) => {
           if (!open) e.currentTarget.style.background = t.surfaceHover;
         }}
         onMouseLeave={(e) => {
-          if (!open) e.currentTarget.style.background = 'transparent';
+          if (!open) e.currentTarget.style.background = open ? t.surfaceHover : 'transparent';
         }}
       >
         <GridIcon color={t.textSecondary} />
@@ -59,51 +66,66 @@ export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, 
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 rounded-xl border p-4 shadow-2xl"
           style={{
+            position: 'absolute',
+            right: 0,
+            top: '100%',
+            marginTop: 8,
+            borderRadius: 12,
+            border: `1px solid ${t.border}`,
+            padding: 16,
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,.25)',
             background: t.cardBg,
-            borderColor: t.border,
             width: 280,
             zIndex: 9999,
             animation: 'appLauncherFadeIn 150ms ease-out',
           }}
         >
           <p
-            className="mb-3 text-xs font-mono uppercase tracking-wide"
-            style={{ color: t.sectionHeading }}
+            style={{
+              marginBottom: 12,
+              fontSize: 12,
+              fontFamily: 'ui-monospace, monospace',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              color: t.sectionHeading,
+              margin: '0 0 12px',
+            }}
           >
             Flowcore Apps
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
             {apps.map((app) => {
               const isCurrent = app.slug === currentAppSlug;
               return (
                 <a
                   key={app.slug}
                   href={app.url}
-                  className="flex flex-col items-center gap-1.5 rounded-lg p-3 text-center transition-colors"
                   style={{
-                    background: isCurrent ? t.accentBg : 'transparent',
-                    borderWidth: 1,
-                    borderStyle: 'solid',
-                    borderColor: isCurrent ? t.accent : 'transparent',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 6,
+                    borderRadius: 8,
+                    padding: 12,
+                    textAlign: 'center',
                     textDecoration: 'none',
+                    transition: 'background 150ms',
+                    background: isCurrent ? t.accentBg : 'transparent',
+                    border: `1px solid ${isCurrent ? t.accent : 'transparent'}`,
                   }}
                   onMouseEnter={(e) => {
-                    if (!isCurrent) {
-                      e.currentTarget.style.background = t.surfaceHover;
-                    }
+                    if (!isCurrent) e.currentTarget.style.background = t.surfaceHover;
                   }}
                   onMouseLeave={(e) => {
-                    if (!isCurrent) {
-                      e.currentTarget.style.background = 'transparent';
-                    }
+                    if (!isCurrent) e.currentTarget.style.background = 'transparent';
                   }}
                 >
                   <AppIcon app={app} theme={t} />
                   <span
-                    className="text-xs leading-tight"
                     style={{
+                      fontSize: 12,
+                      lineHeight: 1.3,
                       color: isCurrent ? t.accent : t.textSecondary,
                       fontWeight: isCurrent ? 600 : 400,
                     }}
@@ -159,8 +181,7 @@ const AppIcon: React.FC<AppIconProps> = ({ app, theme }) => {
         alt=""
         width={32}
         height={32}
-        className="rounded-lg"
-        style={{ background: theme.surfaceHover }}
+        style={{ borderRadius: 8, background: theme.surfaceHover }}
       />
     );
   }
@@ -168,8 +189,13 @@ const AppIcon: React.FC<AppIconProps> = ({ app, theme }) => {
   const initial = app.display_name.charAt(0).toUpperCase();
   return (
     <div
-      className="flex items-center justify-center rounded-lg text-sm font-bold"
       style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 8,
+        fontSize: 14,
+        fontWeight: 700,
         width: 32,
         height: 32,
         background: theme.accentDim,
