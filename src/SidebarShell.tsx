@@ -48,7 +48,6 @@ const SIDEBAR_STYLES = `
     flex-direction: column;
     width: 240px;
     flex-shrink: 0;
-    overflow-y: auto;
     z-index: 20;
   }
 
@@ -232,7 +231,7 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
           </div>
 
           {/* Nav items */}
-          <nav style={{ flex: 1, padding: '8px 0', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <nav style={{ flex: 1, padding: '8px 0', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' }}>
             {navItems.map((item) => (
               <SidebarNavItem
                 key={item.to}
