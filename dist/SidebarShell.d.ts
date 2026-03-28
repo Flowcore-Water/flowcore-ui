@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ThemeColors } from './theme';
 import type { AppInfo } from './AppLauncher';
-import type { NavItem, AppShellUser } from './AppShell';
+import type { NavEntry, AppShellUser } from './AppShell';
 export interface SidebarShellProps {
     /** Color tokens — pass from useTheme() or supply your own */
     theme: ThemeColors;
@@ -9,8 +9,8 @@ export interface SidebarShellProps {
     appSlug: string;
     /** Display name shown in the sidebar header */
     appTitle: string;
-    /** Navigation links rendered vertically in the sidebar */
-    navItems: NavItem[];
+    /** Navigation links rendered vertically in the sidebar. Supports flat items or grouped sections. */
+    navItems: NavEntry[];
     /** Authenticated user info + sign-out callback */
     user?: AppShellUser;
     /** Logo element rendered at the top of the sidebar */

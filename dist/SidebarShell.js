@@ -114,7 +114,14 @@ export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo
                                                 letterSpacing: '0.05em',
                                                 whiteSpace: 'nowrap',
                                                 color: t.accent,
-                                            }, children: appTitle })] }) }), _jsx("nav", { style: { flex: 1, padding: '8px 0', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' }, children: navItems.map((item) => (_jsx(SidebarNavItem, { to: item.to, label: item.label, icon: item.icon, theme: t, onClick: () => setMenuOpen(false) }, item.to))) }), _jsxs("div", { style: { padding: '12px 16px 16px', borderTop: `1px solid ${t.border}` }, children: [themeToggle && (_jsx("div", { style: { marginBottom: user ? 12 : 0 }, children: themeToggle })), user && (_jsxs("div", { children: [_jsxs("div", { style: { marginBottom: 8 }, children: [_jsx("p", { style: { fontSize: 14, fontWeight: 600, color: t.textPrimary, margin: 0 }, children: user.displayName }), _jsx("p", { style: {
+                                            }, children: appTitle })] }) }), _jsx("nav", { style: { flex: 1, padding: '8px 0', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' }, children: navItems.map((entry, i) => 'kind' in entry && entry.kind === 'group' ? (_jsxs("div", { style: { marginBottom: 4 }, children: [_jsx("div", { style: {
+                                                padding: '10px 16px 4px',
+                                                fontSize: 10,
+                                                fontWeight: 600,
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.1em',
+                                                color: t.textMuted,
+                                            }, children: entry.label }), entry.items.map((item) => (_jsx(SidebarNavItem, { to: item.to, label: item.label, icon: item.icon, theme: t, onClick: () => setMenuOpen(false) }, item.to)))] }, entry.label)) : (_jsx(SidebarNavItem, { to: entry.to, label: entry.label, icon: entry.icon, theme: t, onClick: () => setMenuOpen(false) }, entry.to))) }), _jsxs("div", { style: { padding: '12px 16px 16px', borderTop: `1px solid ${t.border}` }, children: [themeToggle && (_jsx("div", { style: { marginBottom: user ? 12 : 0 }, children: themeToggle })), user && (_jsxs("div", { children: [_jsxs("div", { style: { marginBottom: 8 }, children: [_jsx("p", { style: { fontSize: 14, fontWeight: 600, color: t.textPrimary, margin: 0 }, children: user.displayName }), _jsx("p", { style: {
                                                             fontSize: 11,
                                                             textTransform: 'uppercase',
                                                             letterSpacing: '0.05em',

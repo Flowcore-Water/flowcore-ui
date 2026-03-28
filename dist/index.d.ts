@@ -4,7 +4,7 @@ export { defaultTheme, retroTheme } from './theme';
 export { AppLauncher } from './AppLauncher';
 export type { AppInfo, AppLauncherProps } from './AppLauncher';
 export { AppShell } from './AppShell';
-export type { AppShellProps, AppShellUser, NavItem } from './AppShell';
+export type { AppShellProps, AppShellUser, NavItem, NavGroup, NavEntry } from './AppShell';
 export { SidebarShell } from './SidebarShell';
 export type { SidebarShellProps } from './SidebarShell';
 export { FLOWCORE_APPS } from './appRegistry';

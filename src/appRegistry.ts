@@ -10,7 +10,7 @@ export const FLOWCORE_APPS: AppInfo[] = [
   {
     slug: 'admin',
     display_name: 'Admin',
-    url: 'https://flowcore-identity.web.app',
+    url: 'https://admin.flowcorewater.com',
   },
   {
     slug: 'training-tracker',
@@ -21,10 +21,5 @@ export const FLOWCORE_APPS: AppInfo[] = [
     slug: 'wellscope',
     display_name: 'WellScope',
     url: 'https://wellscope.flowcorewater.com',
-  },
-  {
-    slug: 'mirror',
-    display_name: 'ST Mirror',
-    url: 'https://data.flowcorewater.com',
   },
 ];

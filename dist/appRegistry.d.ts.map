@@ -1,1 +1,1 @@
-{"version":3,"file":"appRegistry.d.ts","sourceRoot":"","sources":["../src/appRegistry.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,eAAe,CAAC;AAE7C,qEAAqE;AACrE,eAAO,MAAM,aAAa,EAAE,OAAO,EA0BlC,CAAC"}
+{"version":3,"file":"appRegistry.d.ts","sourceRoot":"","sources":["../src/appRegistry.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,eAAe,CAAC;AAE7C,qEAAqE;AACrE,eAAO,MAAM,aAAa,EAAE,OAAO,EAqBlC,CAAC"}

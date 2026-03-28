@@ -7,6 +7,14 @@ export interface NavItem {
     /** Optional icon (emoji string or ReactNode) shown before the label */
     icon?: string;
 }
+/** A labeled group of nav items rendered with a section header */
+export interface NavGroup {
+    kind: 'group';
+    label: string;
+    items: NavItem[];
+}
+/** Union type: flat nav items or grouped sections */
+export type NavEntry = NavItem | NavGroup;
 export interface AppShellUser {
     displayName: string;
     role: string;

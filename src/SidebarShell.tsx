@@ -5,7 +5,7 @@ import { AppLauncher } from './AppLauncher';
 import { VersionBanner } from './VersionBanner';
 import { FLOWCORE_APPS } from './appRegistry';
 import type { AppInfo } from './AppLauncher';
-import type { NavItem, AppShellUser } from './AppShell';
+import type { NavItem, NavEntry, AppShellUser } from './AppShell';
 
 export interface SidebarShellProps {
   /** Color tokens — pass from useTheme() or supply your own */
@@ -14,8 +14,8 @@ export interface SidebarShellProps {
   appSlug: string;
   /** Display name shown in the sidebar header */
   appTitle: string;
-  /** Navigation links rendered vertically in the sidebar */
-  navItems: NavItem[];
+  /** Navigation links rendered vertically in the sidebar. Supports flat items or grouped sections. */
+  navItems: NavEntry[];
   /** Authenticated user info + sign-out callback */
   user?: AppShellUser;
   /** Logo element rendered at the top of the sidebar */
@@ -232,16 +232,43 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
 
           {/* Nav items */}
           <nav style={{ flex: 1, padding: '8px 0', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' }}>
-            {navItems.map((item) => (
-              <SidebarNavItem
-                key={item.to}
-                to={item.to}
-                label={item.label}
-                icon={item.icon}
-                theme={t}
-                onClick={() => setMenuOpen(false)}
-              />
-            ))}
+            {navItems.map((entry, i) =>
+              'kind' in entry && entry.kind === 'group' ? (
+                <div key={entry.label} style={{ marginBottom: 4 }}>
+                  <div
+                    style={{
+                      padding: '10px 16px 4px',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      color: t.textMuted,
+                    }}
+                  >
+                    {entry.label}
+                  </div>
+                  {entry.items.map((item) => (
+                    <SidebarNavItem
+                      key={item.to}
+                      to={item.to}
+                      label={item.label}
+                      icon={item.icon}
+                      theme={t}
+                      onClick={() => setMenuOpen(false)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <SidebarNavItem
+                  key={(entry as NavItem).to}
+                  to={(entry as NavItem).to}
+                  label={(entry as NavItem).label}
+                  icon={(entry as NavItem).icon}
+                  theme={t}
+                  onClick={() => setMenuOpen(false)}
+                />
+              ),
+            )}
           </nav>
 
           {/* Bottom section: theme toggle + user */}

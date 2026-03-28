@@ -6,9 +6,9 @@ export const FLOWCORE_APPS = [
         url: 'https://ops.flowcorewater.com',
     },
     {
-        slug: 'datadog',
-        display_name: 'DataDog',
-        url: 'https://datadog.flowcorewater.com',
+        slug: 'admin',
+        display_name: 'Admin',
+        url: 'https://admin.flowcorewater.com',
     },
     {
         slug: 'training-tracker',
@@ -19,11 +19,6 @@ export const FLOWCORE_APPS = [
         slug: 'wellscope',
         display_name: 'WellScope',
         url: 'https://wellscope.flowcorewater.com',
-    },
-    {
-        slug: 'mirror',
-        display_name: 'ST Mirror',
-        url: 'https://data.flowcorewater.com',
     },
 ];
 //# sourceMappingURL=appRegistry.js.map
