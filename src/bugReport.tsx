@@ -116,6 +116,35 @@ const MAX_CAPTURED_ERRORS = 20;
 const recentCapturedErrors: BugReportDiagnosticError[] = [];
 let errorCaptureInstalled = false;
 
+function BugReportFabIcon() {
+  return (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M9 7 7 5" />
+      <path d="M15 7 17 5" />
+      <path d="M8 10H5" />
+      <path d="M19 10h-3" />
+      <path d="M8 14H5" />
+      <path d="M19 14h-3" />
+      <path d="M9 18 7 20" />
+      <path d="M15 18 17 20" />
+      <path d="M12 7V4" />
+      <path d="M12 12v2" />
+      <path d="M12 7a4 4 0 0 0-4 4v3a4 4 0 1 0 8 0v-3a4 4 0 0 0-4-4Z" />
+    </svg>
+  );
+}
+
 function truncateString(value: string): string {
   if (value.length <= MAX_STRING_LENGTH) return value;
   return `${value.slice(0, MAX_STRING_LENGTH)}…[truncated]`;
@@ -482,21 +511,22 @@ export function BugReportWidget() {
           right: 20,
           bottom: 20,
           zIndex: 45000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           width: 52,
           height: 52,
+          padding: 0,
           borderRadius: 9999,
           border: `1px solid ${t.border}`,
           background: t.accent,
           color: t.pageBg,
+          lineHeight: 0,
           cursor: 'pointer',
           boxShadow: '0 18px 38px rgba(0, 0, 0, 0.38)',
         }}
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 9v4" />
-          <path d="M12 17h.01" />
-          <path d="M10 2h4l1 2h3a2 2 0 0 1 2 2v11a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a2 2 0 0 1 2-2h3l1-2Z" />
-        </svg>
+        <BugReportFabIcon />
       </button>
 
       {result && (
