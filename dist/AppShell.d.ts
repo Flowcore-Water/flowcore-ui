@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ThemeColors } from './theme';
+import { type BugReportConfig } from './bugReport';
 import type { AppInfo } from './AppLauncher';
 export interface NavItem {
     to: string;
@@ -42,6 +43,8 @@ export interface AppShellProps {
     topBanner?: React.ReactNode;
     /** App registry for the launcher — defaults to FLOWCORE_APPS */
     apps?: AppInfo[];
+    /** Optional shared bug-report widget configuration */
+    bugReport?: BugReportConfig | null;
     children?: React.ReactNode;
 }
 export declare const AppShell: React.FC<AppShellProps>;

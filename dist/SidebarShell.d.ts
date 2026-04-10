@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ThemeColors } from './theme';
+import { type BugReportConfig } from './bugReport';
 import type { AppInfo } from './AppLauncher';
 import type { NavEntry, AppShellUser } from './AppShell';
 export interface SidebarShellProps {
@@ -23,6 +24,8 @@ export interface SidebarShellProps {
     topBanner?: React.ReactNode;
     /** App registry for the launcher — defaults to FLOWCORE_APPS */
     apps?: AppInfo[];
+    /** Optional shared bug-report widget configuration */
+    bugReport?: BugReportConfig | null;
     children?: React.ReactNode;
 }
 export declare const SidebarShell: React.FC<SidebarShellProps>;

@@ -2,6 +2,7 @@ import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-run
 import { useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
 import { AppLauncher } from './AppLauncher';
+import { BugReportProvider, BugReportWidget } from './bugReport';
 import { VersionBanner } from './VersionBanner';
 import { FLOWCORE_APPS } from './appRegistry';
 /**
@@ -87,10 +88,10 @@ const SIDEBAR_STYLES = `
     }
   }
 `;
-export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo, themeToggle, background, topBanner, apps = FLOWCORE_APPS, children, }) => {
+export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo, themeToggle, background, topBanner, apps = FLOWCORE_APPS, bugReport, children, }) => {
     const [menuOpen, setMenuOpen] = useState(false);
     const defaultLogo = (_jsx("img", { src: "/flowcore-logo.svg", alt: "Flowcore", className: "sidebar-shell-logo" }));
-    return (_jsxs(_Fragment, { children: [_jsx("style", { children: SIDEBAR_STYLES }), topBanner, _jsx(VersionBanner, {}), _jsxs("div", { className: "sidebar-shell-mobile-bar", style: { background: t.navBg, borderBottom: `1px solid ${t.navBorder}` }, children: [_jsx(Link, { to: "/", style: { flexShrink: 0 }, children: logo ?? defaultLogo }), _jsx("span", { style: {
+    return (_jsxs(BugReportProvider, { config: bugReport, children: [_jsx("style", { children: SIDEBAR_STYLES }), topBanner, _jsx(VersionBanner, {}), _jsxs("div", { className: "sidebar-shell-mobile-bar", style: { background: t.navBg, borderBottom: `1px solid ${t.navBorder}` }, children: [_jsx(Link, { to: "/", style: { flexShrink: 0 }, children: logo ?? defaultLogo }), _jsx("span", { style: {
                             fontSize: 13,
                             fontFamily: 'ui-monospace, monospace',
                             textTransform: 'uppercase',
@@ -138,7 +139,7 @@ export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo
                                                     color: t.buttonText,
                                                     cursor: 'pointer',
                                                     textAlign: 'center',
-                                                }, children: "Sign Out" })] }))] })] }), _jsxs("main", { style: { flex: 1, overflow: 'auto', position: 'relative' }, children: [background, _jsx("div", { className: "sidebar-shell-content", children: _jsx("div", { className: "sidebar-shell-content-inner", children: children ?? _jsx(Outlet, {}) }) })] })] })] }));
+                                                }, children: "Sign Out" })] }))] })] }), _jsxs("main", { style: { flex: 1, overflow: 'auto', position: 'relative' }, children: [background, _jsx("div", { className: "sidebar-shell-content", children: _jsx("div", { className: "sidebar-shell-content-inner", children: children ?? _jsx(Outlet, {}) }) })] })] }), _jsx(BugReportWidget, {})] }));
 };
 function SidebarNavItem({ to, label, icon, theme: t, onClick, }) {
     return (_jsxs(NavLink, { to: to, onClick: onClick, style: ({ isActive }) => ({

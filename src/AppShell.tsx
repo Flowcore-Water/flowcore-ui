@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
 import type { ThemeColors } from './theme';
 import { AppLauncher } from './AppLauncher';
+import { BugReportProvider, BugReportWidget, type BugReportConfig } from './bugReport';
 import { VersionBanner } from './VersionBanner';
 import { FLOWCORE_APPS } from './appRegistry';
 import type { AppInfo } from './AppLauncher';
@@ -51,6 +52,8 @@ export interface AppShellProps {
   topBanner?: React.ReactNode;
   /** App registry for the launcher — defaults to FLOWCORE_APPS */
   apps?: AppInfo[];
+  /** Optional shared bug-report widget configuration */
+  bugReport?: BugReportConfig | null;
   children?: React.ReactNode;
 }
 
@@ -102,6 +105,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   background,
   topBanner,
   apps = FLOWCORE_APPS,
+  bugReport,
   children,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -111,7 +115,8 @@ export const AppShell: React.FC<AppShellProps> = ({
   );
 
   return (
-    <div style={{ display: 'flex', height: '100vh', flexDirection: 'column', background: t.pageBg }}>
+    <BugReportProvider config={bugReport}>
+      <div style={{ display: 'flex', height: '100vh', flexDirection: 'column', background: t.pageBg }}>
       <style>{APPSHELL_STYLES}</style>
       {topBanner}
       <VersionBanner />
@@ -265,7 +270,9 @@ export const AppShell: React.FC<AppShellProps> = ({
           {children ?? <Outlet />}
         </div>
       </main>
-    </div>
+      </div>
+      <BugReportWidget />
+    </BugReportProvider>
   );
 };
 

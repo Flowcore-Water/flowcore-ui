@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
 import type { ThemeColors } from './theme';
 import { AppLauncher } from './AppLauncher';
+import { BugReportProvider, BugReportWidget, type BugReportConfig } from './bugReport';
 import { VersionBanner } from './VersionBanner';
 import { FLOWCORE_APPS } from './appRegistry';
 import type { AppInfo } from './AppLauncher';
@@ -28,6 +29,8 @@ export interface SidebarShellProps {
   topBanner?: React.ReactNode;
   /** App registry for the launcher — defaults to FLOWCORE_APPS */
   apps?: AppInfo[];
+  /** Optional shared bug-report widget configuration */
+  bugReport?: BugReportConfig | null;
   children?: React.ReactNode;
 }
 
@@ -126,6 +129,7 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
   background,
   topBanner,
   apps = FLOWCORE_APPS,
+  bugReport,
   children,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -135,7 +139,7 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
   );
 
   return (
-    <>
+    <BugReportProvider config={bugReport}>
       <style>{SIDEBAR_STYLES}</style>
       {topBanner}
       <VersionBanner />
@@ -327,7 +331,8 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
           </div>
         </main>
       </div>
-    </>
+      <BugReportWidget />
+    </BugReportProvider>
   );
 };
 
