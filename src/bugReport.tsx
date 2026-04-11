@@ -114,6 +114,7 @@ const DEFAULT_BUG_ENDPOINT_PATH = '/api/bugs/intake';
 const MAX_CAPTURED_ERRORS = 20;
 const AUTOMATIC_CAPTURE_TIMEOUT_MS = 8000;
 const MANUAL_CAPTURE_READY_TIMEOUT_MS = 5000;
+const AUTOMATIC_CAPTURE_WEBKIT_MESSAGE = 'Automatic page capture is unreliable in Safari/WebKit. Use Capture Browser Manually.';
 
 const recentCapturedErrors: BugReportDiagnosticError[] = [];
 let errorCaptureInstalled = false;
@@ -225,6 +226,31 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
+function shouldSkipAutomaticCapture(): boolean {
+  if (typeof navigator === 'undefined') return false;
+
+  const ua = navigator.userAgent;
+  const isSafari = /\bSafari\//.test(ua) && !/\b(Chrome|Chromium|CriOS|Edg|EdgiOS|OPR|OPiOS|Firefox|FxiOS)\b/.test(ua);
+  const isIosWebKit = /\b(iPad|iPhone|iPod)\b/i.test(ua);
+  return isSafari || isIosWebKit;
+}
+
+function mountHiddenCaptureVideo(video: HTMLVideoElement): () => void {
+  video.setAttribute('autoplay', '');
+  video.setAttribute('muted', '');
+  video.style.position = 'fixed';
+  video.style.opacity = '0';
+  video.style.pointerEvents = 'none';
+  video.style.width = '1px';
+  video.style.height = '1px';
+  video.style.left = '-9999px';
+  video.style.top = '0';
+  document.body.appendChild(video);
+  return () => {
+    video.remove();
+  };
+}
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
   let timeoutId = 0;
   const timeoutPromise = new Promise<T>((_, reject) => {
@@ -269,6 +295,22 @@ async function waitForVideoDimensions(video: HTMLVideoElement): Promise<void> {
     video.addEventListener('resize', onReady);
     video.addEventListener('playing', onReady);
   });
+}
+
+async function waitForRenderedVideoFrame(video: HTMLVideoElement): Promise<void> {
+  const requestFrame = video.requestVideoFrameCallback?.bind(video);
+  if (!requestFrame) {
+    await waitForVideoDimensions(video);
+    return;
+  }
+
+  await withTimeout(
+    new Promise<void>((resolve) => {
+      requestFrame(() => resolve());
+    }),
+    MANUAL_CAPTURE_READY_TIMEOUT_MS,
+    'Manual browser capture did not render a video frame.'
+  );
 }
 
 export function installBugReportErrorCapture(): void {
@@ -384,26 +426,35 @@ async function captureManualScreenshot(): Promise<BugReportScreenshot> {
     video.srcObject = stream;
     video.playsInline = true;
     video.muted = true;
-    await video.play();
-    await waitForVideoDimensions(video);
+    const unmountVideo = mountHiddenCaptureVideo(video);
 
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    try {
+      await video.play();
+      await waitForVideoDimensions(video);
+      await waitForRenderedVideoFrame(video);
 
-    const context = canvas.getContext('2d');
-    if (!context) {
-      throw new Error('Unable to capture screenshot context.');
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const context = canvas.getContext('2d');
+      if (!context) {
+        throw new Error('Unable to capture screenshot context.');
+      }
+
+      context.drawImage(video, 0, 0);
+      return {
+        dataUrl: canvas.toDataURL('image/png'),
+        source: 'manual',
+        width: canvas.width,
+        height: canvas.height,
+        capturedAt: new Date().toISOString(),
+      };
+    } finally {
+      video.pause();
+      video.srcObject = null;
+      unmountVideo();
     }
-
-    context.drawImage(video, 0, 0);
-    return {
-      dataUrl: canvas.toDataURL('image/png'),
-      source: 'manual',
-      width: canvas.width,
-      height: canvas.height,
-      capturedAt: new Date().toISOString(),
-    };
   } finally {
     stream.getTracks().forEach((track) => track.stop());
   }
@@ -447,9 +498,14 @@ export function BugReportWidget() {
   const [result, setResult] = useState<BugReportSubmissionResult | null>(null);
 
   const config = bugReport?.config;
+  const skipAutomaticCapture = shouldSkipAutomaticCapture();
 
   useEffect(() => {
     if (!isOpen || !config || screenshot || isCapturing) return;
+    if (skipAutomaticCapture) {
+      setCaptureError(AUTOMATIC_CAPTURE_WEBKIT_MESSAGE);
+      return;
+    }
 
     let cancelled = false;
     setIsCapturing(true);
@@ -471,7 +527,7 @@ export function BugReportWidget() {
     return () => {
       cancelled = true;
     };
-  }, [captureAttempt, config, isCapturing, isOpen, screenshot]);
+  }, [captureAttempt, config, isCapturing, isOpen, screenshot, skipAutomaticCapture]);
 
   if (!config) return null;
 
