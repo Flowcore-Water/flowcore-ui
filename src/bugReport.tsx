@@ -112,6 +112,8 @@ const MAX_STRING_LENGTH = 4000;
 const DEFAULT_IDENTITY_API_BASE = 'https://us-central1-flowcore-st-mirror.cloudfunctions.net/identity';
 const DEFAULT_BUG_ENDPOINT_PATH = '/api/bugs/intake';
 const MAX_CAPTURED_ERRORS = 20;
+const AUTOMATIC_CAPTURE_TIMEOUT_MS = 8000;
+const MANUAL_CAPTURE_READY_TIMEOUT_MS = 5000;
 
 const recentCapturedErrors: BugReportDiagnosticError[] = [];
 let errorCaptureInstalled = false;
@@ -219,6 +221,56 @@ function readDefaultRouteContext(): BugReportRouteContext {
   };
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutId = 0;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+async function waitForVideoDimensions(video: HTMLVideoElement): Promise<void> {
+  if (video.videoWidth > 0 && video.videoHeight > 0) {
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const onReady = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        cleanup();
+        resolve();
+      }
+    };
+
+    const onTimeout = () => {
+      cleanup();
+      reject(new Error('Manual browser capture did not produce a video frame.'));
+    };
+
+    const cleanup = () => {
+      window.clearTimeout(timeoutId);
+      video.removeEventListener('loadedmetadata', onReady);
+      video.removeEventListener('resize', onReady);
+      video.removeEventListener('playing', onReady);
+    };
+
+    const timeoutId = window.setTimeout(onTimeout, MANUAL_CAPTURE_READY_TIMEOUT_MS);
+
+    video.addEventListener('loadedmetadata', onReady);
+    video.addEventListener('resize', onReady);
+    video.addEventListener('playing', onReady);
+  });
+}
+
 export function installBugReportErrorCapture(): void {
   if (errorCaptureInstalled || typeof window === 'undefined') return;
 
@@ -297,12 +349,16 @@ export function createIdentityBugReportSubmitter({
 
 async function captureAutomaticScreenshot(target: HTMLElement | null): Promise<BugReportScreenshot> {
   const captureTarget = target ?? document.body;
-  const canvas = await html2canvas(captureTarget, {
-    backgroundColor: null,
-    useCORS: true,
-    logging: false,
-    scale: Math.min(window.devicePixelRatio || 1, 2),
-  });
+  const canvas = await withTimeout(
+    html2canvas(captureTarget, {
+      backgroundColor: null,
+      useCORS: true,
+      logging: false,
+      scale: Math.min(window.devicePixelRatio || 1, 2),
+    }),
+    AUTOMATIC_CAPTURE_TIMEOUT_MS,
+    'Automatic page capture timed out. You can capture the browser manually.'
+  );
 
   return {
     dataUrl: canvas.toDataURL('image/png'),
@@ -319,14 +375,17 @@ async function captureManualScreenshot(): Promise<BugReportScreenshot> {
   }
 
   const stream = await navigator.mediaDevices.getDisplayMedia({
-    video: { displaySurface: 'browser' } as MediaTrackConstraints,
+    video: true,
+    audio: false,
   });
 
   try {
     const video = document.createElement('video');
     video.srcObject = stream;
     video.playsInline = true;
+    video.muted = true;
     await video.play();
+    await waitForVideoDimensions(video);
 
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
@@ -377,6 +436,7 @@ export function BugReportWidget() {
   const bugReport = useBugReport();
   const { t } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
+  const [captureAttempt, setCaptureAttempt] = useState(0);
   const [summary, setSummary] = useState('');
   const [comments, setComments] = useState('');
   const [screenshot, setScreenshot] = useState<BugReportScreenshot | null>(null);
@@ -399,9 +459,9 @@ export function BugReportWidget() {
       .then((nextScreenshot) => {
         if (!cancelled) setScreenshot(nextScreenshot);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!cancelled) {
-          setCaptureError('Automatic page capture failed. You can capture the browser manually.');
+          setCaptureError(getErrorMessage(error, 'Automatic page capture failed. You can capture the browser manually.'));
         }
       })
       .finally(() => {
@@ -411,7 +471,7 @@ export function BugReportWidget() {
     return () => {
       cancelled = true;
     };
-  }, [config, isCapturing, isOpen, screenshot]);
+  }, [captureAttempt, config, isCapturing, isOpen, screenshot]);
 
   if (!config) return null;
 
@@ -502,6 +562,7 @@ export function BugReportWidget() {
         type="button"
         onClick={() => {
           resetForm();
+          setCaptureAttempt((value) => value + 1);
           setIsOpen(true);
         }}
         aria-label={config.buttonAriaLabel ?? 'Report a bug'}
@@ -721,6 +782,7 @@ export function BugReportWidget() {
                     onClick={() => {
                       setScreenshot(null);
                       setCaptureError(null);
+                      setCaptureAttempt((value) => value + 1);
                     }}
                     style={{
                       borderRadius: 8,
