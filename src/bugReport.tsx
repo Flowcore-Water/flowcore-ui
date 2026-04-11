@@ -487,6 +487,7 @@ export function BugReportWidget() {
   const bugReport = useBugReport();
   const { t } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
+  const [isScreenshotExpanded, setIsScreenshotExpanded] = useState(false);
   const [captureAttempt, setCaptureAttempt] = useState(0);
   const [summary, setSummary] = useState('');
   const [comments, setComments] = useState('');
@@ -499,6 +500,7 @@ export function BugReportWidget() {
 
   const config = bugReport?.config;
   const skipAutomaticCapture = shouldSkipAutomaticCapture();
+  const showAutomaticRetry = !skipAutomaticCapture;
 
   useEffect(() => {
     if (!isOpen || !config || screenshot || isCapturing) return;
@@ -532,6 +534,7 @@ export function BugReportWidget() {
   if (!config) return null;
 
   async function handleManualCapture(): Promise<void> {
+    setIsScreenshotExpanded(false);
     setIsCapturing(true);
     setCaptureError(null);
     try {
@@ -548,6 +551,7 @@ export function BugReportWidget() {
     setSummary('');
     setComments('');
     setScreenshot(null);
+    setIsScreenshotExpanded(false);
     setCaptureError(null);
     setSubmitError(null);
     setResult(null);
@@ -674,6 +678,70 @@ export function BugReportWidget() {
         </div>
       )}
 
+      {isScreenshotExpanded && screenshot && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Expanded bug report screenshot"
+          onClick={() => setIsScreenshotExpanded(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 47000,
+            background: 'rgba(4, 10, 18, 0.84)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              maxWidth: '96vw',
+              maxHeight: '92vh',
+              display: 'grid',
+              gap: 12,
+              justifyItems: 'center',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setIsScreenshotExpanded(false)}
+              style={{
+                justifySelf: 'end',
+                borderRadius: 9999,
+                border: `1px solid ${t.border}`,
+                background: t.cardBg,
+                color: t.textPrimary,
+                padding: '8px 12px',
+                cursor: 'pointer',
+              }}
+            >
+              Close Preview
+            </button>
+            <img
+              src={screenshot.dataUrl}
+              alt="Expanded bug report screenshot"
+              style={{
+                display: 'block',
+                maxWidth: '96vw',
+                maxHeight: '82vh',
+                width: 'auto',
+                height: 'auto',
+                borderRadius: 16,
+                border: `1px solid ${t.border}`,
+                background: t.pageBg,
+                boxShadow: '0 28px 48px rgba(0, 0, 0, 0.45)',
+              }}
+            />
+            <div style={{ color: t.textMuted, fontSize: 12 }}>
+              {screenshot.width}×{screenshot.height} · {screenshot.source === 'manual' ? 'Browser window capture' : 'Page snapshot'}
+            </div>
+          </div>
+        </div>
+      )}
+
       {isOpen && (
         <div
           onClick={() => {
@@ -785,18 +853,33 @@ export function BugReportWidget() {
                   Page capture
                 </div>
                 {screenshot ? (
-                  <img
-                    src={screenshot.dataUrl}
-                    alt="Bug report screenshot"
+                  <button
+                    type="button"
+                    onClick={() => setIsScreenshotExpanded(true)}
                     style={{
+                      display: 'block',
                       width: '100%',
-                      maxHeight: 180,
-                      objectFit: 'cover',
-                      borderRadius: 12,
-                      border: `1px solid ${t.border}`,
-                      background: t.pageBg,
+                      padding: 0,
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'zoom-in',
                     }}
-                  />
+                    title="Expand screenshot"
+                    aria-label="Expand screenshot preview"
+                  >
+                    <img
+                      src={screenshot.dataUrl}
+                      alt="Bug report screenshot"
+                      style={{
+                        width: '100%',
+                        maxHeight: 180,
+                        objectFit: 'cover',
+                        borderRadius: 12,
+                        border: `1px solid ${t.border}`,
+                        background: t.pageBg,
+                      }}
+                    />
+                  </button>
                 ) : (
                   <div
                     style={{
@@ -811,11 +894,21 @@ export function BugReportWidget() {
                     {isCapturing ? 'Capturing the current page…' : 'No screenshot captured yet.'}
                   </div>
                 )}
+                {screenshot && (
+                  <div style={{ color: t.textMuted, fontSize: 12, marginTop: 8 }}>
+                    Click the screenshot to inspect it full size.
+                  </div>
+                )}
                 {captureError && (
                   <div style={{ color: t.fail, fontSize: 12, marginTop: 8 }}>
                     {captureError}
                   </div>
                 )}
+                <div style={{ color: t.textMuted, fontSize: 12, marginTop: 8 }}>
+                  {showAutomaticRetry
+                    ? 'Page snapshot reads the app DOM. Browser window capture uses the browser share picker for an exact tab or window image.'
+                    : 'Safari uses browser window capture here because automatic page snapshotting is unreliable in WebKit.'}
+                </div>
                 <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
                   <button
                     type="button"
@@ -830,27 +923,30 @@ export function BugReportWidget() {
                       cursor: isCapturing || isSubmitting ? 'default' : 'pointer',
                     }}
                   >
-                    Capture Browser Manually
+                    Capture Browser Window
                   </button>
-                  <button
-                    type="button"
-                    disabled={isCapturing || isSubmitting}
-                    onClick={() => {
-                      setScreenshot(null);
-                      setCaptureError(null);
-                      setCaptureAttempt((value) => value + 1);
-                    }}
-                    style={{
-                      borderRadius: 8,
-                      border: `1px solid ${t.buttonBorder}`,
-                      padding: '8px 12px',
-                      background: 'transparent',
-                      color: t.textSecondary,
-                      cursor: isCapturing || isSubmitting ? 'default' : 'pointer',
-                    }}
-                  >
-                    Retry Auto Capture
-                  </button>
+                  {showAutomaticRetry && (
+                    <button
+                      type="button"
+                      disabled={isCapturing || isSubmitting}
+                      onClick={() => {
+                        setScreenshot(null);
+                        setIsScreenshotExpanded(false);
+                        setCaptureError(null);
+                        setCaptureAttempt((value) => value + 1);
+                      }}
+                      style={{
+                        borderRadius: 8,
+                        border: `1px solid ${t.buttonBorder}`,
+                        padding: '8px 12px',
+                        background: 'transparent',
+                        color: t.textSecondary,
+                        cursor: isCapturing || isSubmitting ? 'default' : 'pointer',
+                      }}
+                    >
+                      Retry Page Snapshot
+                    </button>
+                  )}
                 </div>
               </div>
 
