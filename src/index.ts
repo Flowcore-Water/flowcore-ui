@@ -29,3 +29,7 @@ export type {
   BugReportUserContext,
   IdentityBugReportSubmitterOptions,
 } from './bugReport';
+export { StatCard } from './StatCard';
+export type { StatCardProps } from './StatCard';
+export { Button } from './Button';
+export type { ButtonProps } from './Button';
