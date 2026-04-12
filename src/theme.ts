@@ -65,7 +65,7 @@ export interface ThemeColors {
   buttonText: string;
 }
 
-/** Default theme — dark navy with cyan accents */
+/** Default theme — dark navy with FlowCore Blue accents */
 export const defaultTheme: ThemeColors = {
   pageBg: '#0c1220',
   cardBg: '#111827',
@@ -76,8 +76,8 @@ export const defaultTheme: ThemeColors = {
   textSecondary: '#a1b1c7',
   textMuted: '#7089a8',
 
-  accent: '#22d3ee',
-  accentDim: '#0891b2',
+  accent: '#3794EA',
+  accentDim: '#2F5C85',
   accentBg: '#0e1a28',
 
   success: '#34d399',
@@ -96,9 +96,9 @@ export const defaultTheme: ThemeColors = {
   progressFill: '#34d399',
   progressGlow: 'rgba(52, 211, 153, 0.7)',
 
-  logoBg: '#0891b2',
+  logoBg: '#3794EA',
 
-  sectionHeading: '#22d3ee',
+  sectionHeading: '#3794EA',
 
   tableHeaderBg: '#0e1525',
   expandedRowBg: '#0a101c',
