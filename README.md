@@ -10,7 +10,9 @@ Shared UI component library for Flowcore Water web applications.
 - **ThemeProvider / useTheme** — Dark and retro (synthwave) theme system with cookie persistence
 - **BugReportWidget** — In-app bug report modal with screenshot capture and identity-service submission
 - **VersionBanner** — App version display component
-- **Design tokens** — `defaultTheme` (navy/cyan) and `retroTheme` (synthwave/pink)
+- **StatCard** — Themed stat display card with label, value, optional accent color
+- **Button** — Themed button with default/accent/primary variants and sm/md sizes
+- **Design tokens** — `defaultTheme` (navy/FlowCore Blue) and `retroTheme` (synthwave/pink)
 
 ## What it does NOT provide
 
@@ -28,8 +30,8 @@ Shared UI component library for Flowcore Water web applications.
 ## Usage
 
 ```tsx
-import { ThemeProvider, useTheme, SidebarShell, FLOWCORE_APPS } from '@flowcore-water/ui';
-import type { NavItem, ThemeColors, AppShellUser } from '@flowcore-water/ui';
+import { ThemeProvider, useTheme, SidebarShell, FLOWCORE_APPS, StatCard, Button } from '@flowcore-water/ui';
+import type { NavItem, ThemeColors, AppShellUser, StatCardProps, ButtonProps } from '@flowcore-water/ui';
 ```
 
 ## Build
