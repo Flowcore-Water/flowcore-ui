@@ -49,7 +49,7 @@ export const AppLauncher = ({ apps, currentAppSlug, theme: t, dropdownAlign = 'r
                     padding: 16,
                     boxShadow: '0 25px 50px -12px rgba(0,0,0,.25)',
                     background: t.cardBg,
-                    width: 280,
+                    width: 320,
                     zIndex: 9999,
                     animation: 'appLauncherFadeIn 150ms ease-out',
                 }, children: [_jsx("p", { style: {
@@ -68,12 +68,13 @@ export const AppLauncher = ({ apps, currentAppSlug, theme: t, dropdownAlign = 'r
                                     alignItems: 'center',
                                     gap: 6,
                                     borderRadius: 8,
-                                    padding: 12,
+                                    padding: '10px 8px',
                                     textAlign: 'center',
                                     textDecoration: 'none',
                                     transition: 'background 150ms',
                                     background: isCurrent ? t.accentBg : 'transparent',
-                                    border: `1px solid ${isCurrent ? t.accent : 'transparent'}`,
+                                    border: 'none',
+                                    boxShadow: isCurrent ? `inset 0 0 0 1px ${t.accent}` : 'none',
                                 }, onMouseEnter: (e) => {
                                     if (!isCurrent)
                                         e.currentTarget.style.background = t.surfaceHover;

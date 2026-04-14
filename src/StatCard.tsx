@@ -4,29 +4,40 @@ export interface StatCardProps {
   label: string;
   value: string | number;
   color?: string;
+  icon?: string;
+  onClick?: () => void;
+  active?: boolean;
 }
 
-export function StatCard({ label, value, color }: StatCardProps) {
+export function StatCard({ label, value, color, icon, onClick, active }: StatCardProps) {
   const { t } = useTheme();
   const accentColor = color || t.accent;
+  const isClickable = !!onClick;
 
   return (
     <div
-      className="flex h-full min-h-[118px] flex-col rounded-xl border md:min-h-[126px]"
-      style={{ background: t.cardBg, borderColor: t.border }}
+      onClick={onClick}
+      style={{
+        background: t.cardBg,
+        border: `1px solid ${active ? accentColor : t.border}`,
+        borderRadius: 10,
+        padding: '16px 20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        cursor: isClickable ? 'pointer' : undefined,
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+        boxShadow: active ? `0 0 0 1px ${accentColor}40` : undefined,
+        outline: 'none',
+      }}
     >
-      <div
-        className="min-h-[2.875rem] px-5 pt-[18px] pb-2 text-xs font-medium uppercase tracking-wide leading-snug md:px-6 md:pt-5"
-        style={{ color: t.textMuted }}
-      >
+      <span style={{ fontSize: 12, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        {icon && <span style={{ marginRight: 6 }}>{icon}</span>}
         {label}
-      </div>
-      <div
-        className="flex flex-1 items-center justify-center px-5 pb-[18px] text-3xl font-bold leading-none md:px-6 md:pb-5 md:text-[2rem]"
-        style={{ color: accentColor }}
-      >
+      </span>
+      <span style={{ fontSize: 28, fontWeight: 700, color: accentColor }}>
         {typeof value === 'number' ? value.toLocaleString() : value}
-      </div>
+      </span>
     </div>
   );
 }
