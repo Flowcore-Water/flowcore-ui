@@ -12,9 +12,9 @@ export interface ButtonProps {
 export function Button({ children, onClick, variant = 'default', size = 'md', disabled, type = 'button' }: ButtonProps) {
   const { t } = useTheme();
 
-  const sizeClasses = size === 'sm'
-    ? 'px-3 py-1.5 text-xs'
-    : 'px-4 py-2 text-sm';
+  const sizeStyles = size === 'sm'
+    ? { padding: '6px 12px', fontSize: 12 }
+    : { padding: '8px 16px', fontSize: 14 };
 
   const colors = variant === 'primary'
     ? { background: t.accent, borderColor: t.accent, color: t.cardBg }
@@ -27,8 +27,16 @@ export function Button({ children, onClick, variant = 'default', size = 'md', di
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-md border font-medium transition-colors disabled:opacity-40 ${sizeClasses}`}
-      style={colors}
+      style={{
+        ...sizeStyles,
+        ...colors,
+        borderRadius: 6,
+        border: `1px solid ${colors.borderColor}`,
+        fontWeight: 500,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.4 : 1,
+        transition: 'background-color 0.15s, border-color 0.15s, color 0.15s',
+      }}
     >
       {children}
     </button>
