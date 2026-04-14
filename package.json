@@ -14,7 +14,7 @@
   },
   "files": [
     "dist",
-    "src/base.css"
+    "src"
   ],
   "scripts": {
     "build": "tsc",
