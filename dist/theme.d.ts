@@ -40,7 +40,7 @@ export interface ThemeColors {
     buttonBorder: string;
     buttonText: string;
 }
-/** Default theme — dark navy with cyan accents */
+/** Default theme — dark navy with FlowCore Blue accents */
 export declare const defaultTheme: ThemeColors;
 /** Retro theme — synthwave with purple backgrounds and hot pink accents */
 export declare const retroTheme: ThemeColors;
