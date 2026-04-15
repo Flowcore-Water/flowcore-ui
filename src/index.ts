@@ -33,3 +33,5 @@ export { StatCard } from './StatCard';
 export type { StatCardProps } from './StatCard';
 export { Button } from './Button';
 export type { ButtonProps } from './Button';
+export { AlertBanner } from './AlertBanner';
+export type { AlertBannerProps } from './AlertBanner';

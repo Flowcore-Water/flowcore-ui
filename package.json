@@ -1,6 +1,6 @@
 {
   "name": "@flowcore-water/ui",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shared UI component library for Flowcore Water apps — AppShell, ThemeProvider, AppLauncher, design tokens",
   "type": "module",
   "main": "dist/index.js",
