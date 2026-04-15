@@ -34,6 +34,7 @@ export interface BugReportDiagnosticError {
 
 export interface BugReportDiagnostics {
   recentErrors?: BugReportDiagnosticError[];
+  consoleLogs?: ConsoleLogEntry[];
   breadcrumbs?: unknown[];
   sentry?: {
     lastEventId?: string | null;
@@ -118,6 +119,17 @@ const AUTOMATIC_CAPTURE_WEBKIT_MESSAGE = 'Automatic page capture is unreliable i
 
 const recentCapturedErrors: BugReportDiagnosticError[] = [];
 let errorCaptureInstalled = false;
+
+export interface ConsoleLogEntry {
+  level: 'error' | 'warn' | 'log';
+  message: string;
+  args: unknown[];
+  timestamp: number;
+}
+
+const MAX_CAPTURED_CONSOLE_LOGS = 50;
+const recentConsoleLogs: ConsoleLogEntry[] = [];
+let consoleCaptureInstalled = false;
 
 function BugReportFabIcon() {
   return (
@@ -328,11 +340,42 @@ export function installBugReportErrorCapture(): void {
     pushCapturedError(normalizeCapturedError(event.reason));
   });
 
+  installConsoleCapture();
   errorCaptureInstalled = true;
 }
 
 export function getRecentBugReportErrors(limit = 10): BugReportDiagnosticError[] {
   return recentCapturedErrors.slice(0, Math.max(limit, 0));
+}
+
+function installConsoleCapture(): void {
+  if (consoleCaptureInstalled || typeof window === 'undefined') return;
+
+  const levels: Array<'error' | 'warn' | 'log'> = ['error', 'warn', 'log'];
+  for (const level of levels) {
+    const original = console[level];
+    console[level] = (...args: unknown[]) => {
+      original.apply(console, args);
+      const message = args
+        .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
+        .join(' ');
+      recentConsoleLogs.unshift({
+        level,
+        message: message.slice(0, MAX_STRING_LENGTH),
+        args: args.slice(0, 5).map((a) => sanitizeValue(a)),
+        timestamp: Date.now(),
+      });
+      if (recentConsoleLogs.length > MAX_CAPTURED_CONSOLE_LOGS) {
+        recentConsoleLogs.length = MAX_CAPTURED_CONSOLE_LOGS;
+      }
+    };
+  }
+
+  consoleCaptureInstalled = true;
+}
+
+export function getRecentConsoleLogs(limit = 50): ConsoleLogEntry[] {
+  return recentConsoleLogs.slice(0, Math.max(limit, 0));
 }
 
 export function resolveIdentityBugReportApiBase(apiBaseUrl?: string): string {
@@ -582,6 +625,11 @@ export function BugReportWidget() {
         activeConfig.getRouteContext?.(),
       ]);
 
+      const mergedDiagnostics: BugReportDiagnostics = {
+        ...diagnostics,
+        consoleLogs: getRecentConsoleLogs(),
+      };
+
       const submission: BugReportSubmissionPayload = {
         appSlug: activeConfig.appSlug,
         summary: trimmedSummary,
@@ -596,7 +644,7 @@ export function BugReportWidget() {
         route: sanitizeValue(routeContext ?? readDefaultRouteContext()) as BugReportRouteContext,
         user: sanitizeValue(reporter) as BugReportUserContext | undefined,
         release: sanitizeValue(release) as BugReportReleaseInfo | undefined,
-        diagnostics: sanitizeValue(diagnostics) as BugReportDiagnostics | undefined,
+        diagnostics: sanitizeValue(mergedDiagnostics) as BugReportDiagnostics | undefined,
         appState: sanitizeValue(stateSnapshot),
         screenshot: screenshot ?? undefined,
         submittedAt: new Date().toISOString(),
