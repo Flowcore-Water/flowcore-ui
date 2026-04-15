@@ -33,6 +33,16 @@ export interface ThemeColors {
   failBg: string;
   failBorder: string;
 
+  // Warning
+  warn: string;
+  warnBg: string;
+  warnBorder: string;
+
+  // Info
+  info: string;
+  infoBg: string;
+  infoBorder: string;
+
   // Borders & surfaces
   border: string;
   borderSubtle: string;
@@ -88,6 +98,14 @@ export const defaultTheme: ThemeColors = {
   failBg: '#1f1010',
   failBorder: 'rgba(239, 68, 68, 0.3)',
 
+  warn: '#fbbf24',
+  warnBg: '#1a1608',
+  warnBorder: 'rgba(251, 191, 36, 0.3)',
+
+  info: '#3794EA',
+  infoBg: '#0e1a28',
+  infoBorder: 'rgba(55, 148, 234, 0.3)',
+
   border: 'rgba(71, 85, 105, 0.5)',
   borderSubtle: 'rgba(71, 85, 105, 0.35)',
   surfaceHover: 'rgba(71, 85, 105, 0.25)',
@@ -135,6 +153,14 @@ export const retroTheme: ThemeColors = {
   fail: '#ff4444',
   failBg: '#1a0808',
   failBorder: 'rgba(255, 68, 68, 0.35)',
+
+  warn: '#f5a623',
+  warnBg: '#1a1208',
+  warnBorder: 'rgba(245, 166, 35, 0.3)',
+
+  info: '#05d9e8',
+  infoBg: '#081a1e',
+  infoBorder: 'rgba(5, 217, 232, 0.3)',
 
   border: 'rgba(191, 64, 191, 0.35)',
   borderSubtle: 'rgba(138, 43, 226, 0.25)',
