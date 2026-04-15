@@ -78,6 +78,16 @@ export interface BugReportSubmissionResult {
   duplicateOfTicketId?: string | null;
 }
 
+export interface MyBugSummary {
+  id: string;
+  app_slug: string;
+  summary: string;
+  status: string;
+  updated_at: string | null;
+}
+
+export type BugReportFeedbackVerdict = 'confirmed_fixed' | 'still_broken';
+
 export interface IdentityBugReportSubmitterOptions {
   getAuthToken: () => MaybePromise<string | null | undefined>;
   apiBaseUrl?: string;
@@ -97,6 +107,8 @@ export interface BugReportConfig {
   getRelease?: () => MaybePromise<BugReportReleaseInfo | undefined>;
   getRouteContext?: () => MaybePromise<BugReportRouteContext | undefined>;
   getCaptureTarget?: () => HTMLElement | null;
+  getMyBugs?: () => Promise<MyBugSummary[]>;
+  submitFeedback?: (ticketId: string, verdict: BugReportFeedbackVerdict) => Promise<void>;
 }
 
 interface BugReportContextValue {
@@ -432,6 +444,55 @@ export function createIdentityBugReportSubmitter({
   };
 }
 
+export function createIdentityMyBugsFetcher({
+  getAuthToken,
+  apiBaseUrl,
+  fetchImpl = fetch,
+}: Pick<IdentityBugReportSubmitterOptions, 'getAuthToken' | 'apiBaseUrl' | 'fetchImpl'>): BugReportConfig['getMyBugs'] {
+  const baseUrl = resolveIdentityBugReportApiBase(apiBaseUrl);
+
+  return async () => {
+    const token = await getAuthToken();
+    if (!token) return [];
+
+    const response = await (fetchImpl ?? fetch)(`${baseUrl}/api/bugs/my-bugs`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+
+    if (!response.ok) return [];
+
+    const data = await response.json() as { items?: MyBugSummary[] };
+    return data.items ?? [];
+  };
+}
+
+export function createIdentityFeedbackSubmitter({
+  getAuthToken,
+  apiBaseUrl,
+  fetchImpl = fetch,
+}: Pick<IdentityBugReportSubmitterOptions, 'getAuthToken' | 'apiBaseUrl' | 'fetchImpl'>): BugReportConfig['submitFeedback'] {
+  const baseUrl = resolveIdentityBugReportApiBase(apiBaseUrl);
+
+  return async (ticketId, verdict) => {
+    const token = await getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await (fetchImpl ?? fetch)(`${baseUrl}/api/bugs/${ticketId}/feedback`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ verdict }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Feedback submission failed (${response.status})`);
+    }
+  };
+}
+
 async function captureAutomaticScreenshot(target: HTMLElement | null): Promise<BugReportScreenshot> {
   const captureTarget = target ?? document.body;
   const canvas = await withTimeout(
@@ -540,6 +601,13 @@ export function BugReportWidget() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<BugReportSubmissionResult | null>(null);
+  const [activeTab, setActiveTab] = useState<'report' | 'my-bugs'>('report');
+  const [myBugs, setMyBugs] = useState<MyBugSummary[]>([]);
+  const [myBugsLoading, setMyBugsLoading] = useState(false);
+  const [feedbackPending, setFeedbackPending] = useState<string | null>(null);
+  const [relatedToTicketId, setRelatedToTicketId] = useState<string | null>(null);
+
+  const pendingFeedbackCount = myBugs.filter((b) => b.status === 'resolved').length;
 
   const config = bugReport?.config;
   const skipAutomaticCapture = shouldSkipAutomaticCapture();
@@ -574,6 +642,17 @@ export function BugReportWidget() {
     };
   }, [captureAttempt, config, isCapturing, isOpen, screenshot, skipAutomaticCapture]);
 
+  useEffect(() => {
+    if (!isOpen || !config?.getMyBugs) return;
+    let cancelled = false;
+    setMyBugsLoading(true);
+    void config.getMyBugs()
+      .then((bugs) => { if (!cancelled) setMyBugs(bugs); })
+      .catch(() => { if (!cancelled) setMyBugs([]); })
+      .finally(() => { if (!cancelled) setMyBugsLoading(false); });
+    return () => { cancelled = true; };
+  }, [isOpen, config]);
+
   if (!config) return null;
 
   async function handleManualCapture(): Promise<void> {
@@ -600,6 +679,9 @@ export function BugReportWidget() {
     setResult(null);
     setIsCapturing(false);
     setIsSubmitting(false);
+    setActiveTab('report');
+    setRelatedToTicketId(null);
+    setFeedbackPending(null);
   }
 
   async function handleSubmit(event: React.FormEvent): Promise<void> {
@@ -650,6 +732,10 @@ export function BugReportWidget() {
         submittedAt: new Date().toISOString(),
       };
 
+      if (relatedToTicketId) {
+        (submission as unknown as Record<string, unknown>).relatedToTicketId = relatedToTicketId;
+      }
+
       const nextResult = await activeConfig.submitReport(submission);
       setResult(nextResult);
       setTimeout(() => {
@@ -662,6 +748,28 @@ export function BugReportWidget() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleFeedback(ticketId: string, verdict: BugReportFeedbackVerdict): Promise<void> {
+    if (!config?.submitFeedback) return;
+    setFeedbackPending(ticketId);
+    try {
+      await config.submitFeedback(ticketId, verdict);
+      setMyBugs((prev) => prev.map((b) =>
+        b.id === ticketId
+          ? { ...b, status: verdict === 'confirmed_fixed' ? 'closed' : 'triaged' }
+          : b
+      ));
+    } catch {
+      // Silently fail for now — the badge will refresh next open
+    } finally {
+      setFeedbackPending(null);
+    }
+  }
+
+  function handleNewProblem(ticketId: string): void {
+    setRelatedToTicketId(ticketId);
+    setActiveTab('report');
   }
 
   return (
@@ -696,6 +804,29 @@ export function BugReportWidget() {
         }}
       >
         <BugReportFabIcon />
+        {pendingFeedbackCount > 0 && (
+          <span
+            style={{
+              position: 'absolute',
+              top: -4,
+              right: -4,
+              minWidth: 20,
+              height: 20,
+              borderRadius: 9999,
+              background: t.fail,
+              color: '#fff',
+              fontSize: 11,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 5px',
+              lineHeight: 1,
+            }}
+          >
+            {pendingFeedbackCount}
+          </span>
+        )}
       </button>
 
       {result && (
@@ -856,7 +987,70 @@ export function BugReportWidget() {
               </button>
             </div>
 
+            <div
+              style={{
+                display: 'flex',
+                borderBottom: `1px solid ${t.border}`,
+              }}
+            >
+              {(['report', 'my-bugs'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 0',
+                    border: 'none',
+                    borderBottom: activeTab === tab ? `2px solid ${t.accent}` : '2px solid transparent',
+                    background: 'transparent',
+                    color: activeTab === tab ? t.textPrimary : t.textMuted,
+                    fontWeight: activeTab === tab ? 700 : 400,
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    position: 'relative',
+                  }}
+                >
+                  {tab === 'report' ? 'Report' : 'My Bugs'}
+                  {tab === 'my-bugs' && pendingFeedbackCount > 0 && (
+                    <span
+                      style={{
+                        marginLeft: 6,
+                        minWidth: 18,
+                        height: 18,
+                        borderRadius: 9999,
+                        background: t.fail,
+                        color: '#fff',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0 4px',
+                      }}
+                    >
+                      {pendingFeedbackCount}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'report' && (
             <form onSubmit={(event) => void handleSubmit(event)} style={{ padding: 18 }}>
+              {relatedToTicketId && (
+                <div style={{
+                  marginBottom: 14,
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  background: t.inputBg,
+                  border: `1px solid ${t.border}`,
+                  color: t.textSecondary,
+                  fontSize: 12,
+                }}>
+                  Follow-up to ticket {relatedToTicketId}
+                </div>
+              )}
               <label style={{ display: 'block', color: t.textSecondary, fontSize: 12, marginBottom: 6 }}>
                 Summary
               </label>
@@ -1050,6 +1244,113 @@ export function BugReportWidget() {
                 </button>
               </div>
             </form>
+            )}
+
+            {activeTab === 'my-bugs' && (
+              <div style={{ padding: 18 }}>
+                {myBugsLoading ? (
+                  <div style={{ color: t.textMuted, fontSize: 13, textAlign: 'center', padding: 24 }}>
+                    Loading your bugs...
+                  </div>
+                ) : myBugs.length === 0 ? (
+                  <div style={{ color: t.textMuted, fontSize: 13, textAlign: 'center', padding: 24 }}>
+                    No bug reports found.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {myBugs.map((bug) => (
+                      <div
+                        key={bug.id}
+                        style={{
+                          borderRadius: 10,
+                          border: `1px solid ${bug.status === 'resolved' ? t.accent : t.border}`,
+                          padding: 12,
+                          background: bug.status === 'resolved' ? `${t.accent}11` : 'transparent',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                          <div style={{ color: t.textPrimary, fontSize: 13, fontWeight: 600, flex: 1 }}>
+                            {bug.summary}
+                          </div>
+                          <span style={{
+                            fontSize: 10,
+                            fontWeight: 600,
+                            padding: '2px 8px',
+                            borderRadius: 9999,
+                            background: bug.status === 'resolved' ? t.accent : t.borderSubtle,
+                            color: bug.status === 'resolved' ? '#fff' : t.textSecondary,
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {bug.status.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                        <div style={{ color: t.textMuted, fontSize: 11, marginTop: 4 }}>
+                          {bug.app_slug}{bug.updated_at ? ` · ${new Date(bug.updated_at).toLocaleDateString()}` : ''}
+                        </div>
+                        {bug.status === 'resolved' && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                            <button
+                              type="button"
+                              disabled={feedbackPending === bug.id}
+                              onClick={() => void handleFeedback(bug.id, 'confirmed_fixed')}
+                              style={{
+                                flex: 1,
+                                padding: '6px 0',
+                                borderRadius: 6,
+                                border: `1px solid ${t.success}`,
+                                background: 'transparent',
+                                color: t.success,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                cursor: feedbackPending === bug.id ? 'default' : 'pointer',
+                              }}
+                            >
+                              It&apos;s fixed!
+                            </button>
+                            <button
+                              type="button"
+                              disabled={feedbackPending === bug.id}
+                              onClick={() => void handleFeedback(bug.id, 'still_broken')}
+                              style={{
+                                flex: 1,
+                                padding: '6px 0',
+                                borderRadius: 6,
+                                border: `1px solid ${t.fail}`,
+                                background: 'transparent',
+                                color: t.fail,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                cursor: feedbackPending === bug.id ? 'default' : 'pointer',
+                              }}
+                            >
+                              Still broken
+                            </button>
+                            <button
+                              type="button"
+                              disabled={feedbackPending === bug.id}
+                              onClick={() => handleNewProblem(bug.id)}
+                              style={{
+                                flex: 1,
+                                padding: '6px 0',
+                                borderRadius: 6,
+                                border: `1px solid ${t.border}`,
+                                background: 'transparent',
+                                color: t.textSecondary,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                cursor: feedbackPending === bug.id ? 'default' : 'pointer',
+                              }}
+                            >
+                              New problem
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
