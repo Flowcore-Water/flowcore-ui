@@ -2,7 +2,7 @@ import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-run
 import { useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
 import { AppLauncher } from './AppLauncher';
-import { BugReportProvider, BugReportWidget } from './bugReport';
+import { BugReportProvider, BugReportWidget, BugReportErrorBoundary } from './bugReport';
 import { VersionBanner } from './VersionBanner';
 import { FLOWCORE_APPS } from './appRegistry';
 /**
@@ -139,7 +139,7 @@ export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo
                                                     color: t.buttonText,
                                                     cursor: 'pointer',
                                                     textAlign: 'center',
-                                                }, children: "Sign Out" })] }))] })] }), _jsxs("main", { style: { flex: 1, overflow: 'auto', position: 'relative' }, children: [background, _jsx("div", { className: "sidebar-shell-content", children: _jsx("div", { className: "sidebar-shell-content-inner", children: children ?? _jsx(Outlet, {}) }) })] })] }), _jsx(BugReportWidget, {})] }));
+                                                }, children: "Sign Out" })] }))] })] }), _jsxs("main", { style: { flex: 1, overflow: 'auto', position: 'relative' }, children: [background, _jsx("div", { className: "sidebar-shell-content", children: _jsx("div", { className: "sidebar-shell-content-inner", children: bugReport ? (_jsx(BugReportErrorBoundary, { config: bugReport, children: children ?? _jsx(Outlet, {}) })) : (children ?? _jsx(Outlet, {})) }) })] })] }), _jsx(BugReportWidget, {})] }));
 };
 function SidebarNavItem({ to, label, icon, theme: t, onClick, }) {
     return (_jsxs(NavLink, { to: to, onClick: onClick, style: ({ isActive }) => ({

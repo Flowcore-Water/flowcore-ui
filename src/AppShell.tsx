@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
 import type { ThemeColors } from './theme';
 import { AppLauncher } from './AppLauncher';
-import { BugReportProvider, BugReportWidget, type BugReportConfig } from './bugReport';
+import { BugReportProvider, BugReportWidget, BugReportErrorBoundary, type BugReportConfig } from './bugReport';
 import { VersionBanner } from './VersionBanner';
 import { FLOWCORE_APPS } from './appRegistry';
 import type { AppInfo } from './AppLauncher';
@@ -267,7 +267,13 @@ export const AppShell: React.FC<AppShellProps> = ({
           className="appshell-content"
           style={{ maxWidth: '80rem', marginLeft: 'auto', marginRight: 'auto', width: '100%', position: 'relative', zIndex: 1 }}
         >
-          {children ?? <Outlet />}
+          {bugReport ? (
+            <BugReportErrorBoundary config={bugReport}>
+              {children ?? <Outlet />}
+            </BugReportErrorBoundary>
+          ) : (
+            children ?? <Outlet />
+          )}
         </div>
       </main>
       </div>

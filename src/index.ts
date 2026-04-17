@@ -13,6 +13,7 @@ export type { VersionBannerProps } from './VersionBanner';
 export {
   BugReportProvider,
   BugReportWidget,
+  BugReportErrorBoundary,
   createIdentityBugReportSubmitter,
   getRecentBugReportErrors,
   installBugReportErrorCapture,
@@ -20,6 +21,7 @@ export {
   useBugReport,
 } from './bugReport';
 export type {
+  AutoCaptureConfig,
   BugReportConfig,
   BugReportDiagnostics,
   BugReportReleaseInfo,

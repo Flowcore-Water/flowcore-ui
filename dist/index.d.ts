@@ -10,10 +10,12 @@ export type { SidebarShellProps } from './SidebarShell';
 export { FLOWCORE_APPS } from './appRegistry';
 export { VersionBanner } from './VersionBanner';
 export type { VersionBannerProps } from './VersionBanner';
-export { BugReportProvider, BugReportWidget, createIdentityBugReportSubmitter, getRecentBugReportErrors, installBugReportErrorCapture, resolveIdentityBugReportApiBase, useBugReport, } from './bugReport';
-export type { BugReportConfig, BugReportDiagnostics, BugReportReleaseInfo, BugReportRouteContext, BugReportSubmissionPayload, BugReportSubmissionResult, BugReportUserContext, IdentityBugReportSubmitterOptions, } from './bugReport';
+export { BugReportProvider, BugReportWidget, BugReportErrorBoundary, createIdentityBugReportSubmitter, getRecentBugReportErrors, installBugReportErrorCapture, resolveIdentityBugReportApiBase, useBugReport, } from './bugReport';
+export type { AutoCaptureConfig, BugReportConfig, BugReportDiagnostics, BugReportReleaseInfo, BugReportRouteContext, BugReportSubmissionPayload, BugReportSubmissionResult, BugReportUserContext, IdentityBugReportSubmitterOptions, } from './bugReport';
 export { StatCard } from './StatCard';
 export type { StatCardProps } from './StatCard';
 export { Button } from './Button';
 export type { ButtonProps } from './Button';
+export { AlertBanner } from './AlertBanner';
+export type { AlertBannerProps } from './AlertBanner';
 //# sourceMappingURL=index.d.ts.map

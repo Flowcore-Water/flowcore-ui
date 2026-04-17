@@ -22,6 +22,12 @@ export interface ThemeColors {
     fail: string;
     failBg: string;
     failBorder: string;
+    warn: string;
+    warnBg: string;
+    warnBorder: string;
+    info: string;
+    infoBg: string;
+    infoBorder: string;
     border: string;
     borderSubtle: string;
     surfaceHover: string;
