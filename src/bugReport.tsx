@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { useTheme } from './ThemeContext';
 
@@ -95,11 +95,22 @@ export interface IdentityBugReportSubmitterOptions {
   fetchImpl?: typeof fetch;
 }
 
+export interface AutoCaptureConfig {
+  /** Minimum milliseconds between auto-reports for the same error message. Default 30 000. */
+  dedupeWindowMs?: number;
+  /** Maximum auto-reports allowed per page session. Default 10. */
+  maxReportsPerSession?: number;
+  /** Milliseconds to wait after an error before submitting, to batch cascading errors. Default 2 000. */
+  debounceMs?: number;
+}
+
 export interface BugReportConfig {
   appSlug: string;
   enabled?: boolean;
   modalTitle?: string;
   buttonAriaLabel?: string;
+  /** Enable automatic bug report submission on uncaught errors. Pass `true` for defaults or a config object. */
+  autoCapture?: boolean | AutoCaptureConfig;
   submitReport: (payload: BugReportSubmissionPayload) => Promise<BugReportSubmissionResult>;
   getReporter?: () => MaybePromise<BugReportUserContext | undefined>;
   getStateSnapshot?: () => MaybePromise<unknown>;
@@ -564,6 +575,272 @@ async function captureManualScreenshot(): Promise<BugReportScreenshot> {
   }
 }
 
+const AUTO_CAPTURE_DEFAULTS: Required<AutoCaptureConfig> = {
+  dedupeWindowMs: 30_000,
+  maxReportsPerSession: 10,
+  debounceMs: 2_000,
+};
+
+const AUTO_REPORT_TOAST_DURATION_MS = 4_000;
+
+interface AutoReportToast {
+  id: number;
+  ticketId: string;
+  summary: string;
+  githubIssueUrl?: string | null;
+}
+
+let autoReportToastCounter = 0;
+
+function AutoBugReporter({ config }: { config: BugReportConfig }) {
+  const opts = useMemo<Required<AutoCaptureConfig>>(() => {
+    if (!config.autoCapture || config.autoCapture === true) return AUTO_CAPTURE_DEFAULTS;
+    return { ...AUTO_CAPTURE_DEFAULTS, ...config.autoCapture };
+  }, [config.autoCapture]);
+
+  const reportsThisSession = useRef(0);
+  const recentMessageTimestamps = useRef<Map<string, number>>(new Map());
+  const debounceTimer = useRef<number>(0);
+  const pendingErrors = useRef<BugReportDiagnosticError[]>([]);
+  const [toasts, setToasts] = useState<AutoReportToast[]>([]);
+  const { t } = useTheme();
+
+  const submitAutoReport = useCallback(async (errors: BugReportDiagnosticError[]) => {
+    if (reportsThisSession.current >= opts.maxReportsPerSession) return;
+    if (errors.length === 0) return;
+
+    const now = Date.now();
+    const deduped = errors.filter((err) => {
+      const key = err.message;
+      const lastSeen = recentMessageTimestamps.current.get(key);
+      if (lastSeen && now - lastSeen < opts.dedupeWindowMs) return false;
+      recentMessageTimestamps.current.set(key, now);
+      return true;
+    });
+
+    if (deduped.length === 0) return;
+
+    reportsThisSession.current += 1;
+
+    const summary = deduped.length === 1
+      ? `[Auto] ${deduped[0].message.slice(0, 200)}`
+      : `[Auto] ${deduped.length} errors: ${deduped[0].message.slice(0, 150)}`;
+
+    const comments = deduped
+      .map((e, i) => `Error ${i + 1}: ${e.message}${e.stack ? `\n${e.stack}` : ''}`)
+      .join('\n\n---\n\n');
+
+    try {
+      const [reporter, diagnostics, release, routeContext] = await Promise.all([
+        config.getReporter?.(),
+        config.getDiagnostics?.(),
+        config.getRelease?.(),
+        config.getRouteContext?.(),
+      ]);
+
+      const mergedDiagnostics: BugReportDiagnostics = {
+        ...diagnostics,
+        recentErrors: deduped,
+        consoleLogs: getRecentConsoleLogs(),
+      };
+
+      const payload: BugReportSubmissionPayload = {
+        appSlug: config.appSlug,
+        summary,
+        comments,
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight,
+          devicePixelRatio: window.devicePixelRatio || 1,
+        },
+        route: sanitizeValue(routeContext ?? readDefaultRouteContext()) as BugReportRouteContext,
+        user: sanitizeValue(reporter) as BugReportUserContext | undefined,
+        release: sanitizeValue(release) as BugReportReleaseInfo | undefined,
+        diagnostics: sanitizeValue(mergedDiagnostics) as BugReportDiagnostics | undefined,
+        submittedAt: new Date().toISOString(),
+      };
+
+      const result = await config.submitReport(payload);
+
+      const toastId = ++autoReportToastCounter;
+      setToasts((prev) => [...prev, {
+        id: toastId,
+        ticketId: result.ticketId,
+        summary: deduped[0].message.slice(0, 120),
+        githubIssueUrl: result.githubIssueUrl,
+      }]);
+
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+      }, AUTO_REPORT_TOAST_DURATION_MS);
+    } catch {
+      // Auto-report submission failed silently — don't cascade errors
+    }
+  }, [config, opts]);
+
+  const scheduleSubmission = useCallback((error: BugReportDiagnosticError) => {
+    pendingErrors.current.push(error);
+    window.clearTimeout(debounceTimer.current);
+    debounceTimer.current = window.setTimeout(() => {
+      const batch = pendingErrors.current.splice(0);
+      void submitAutoReport(batch);
+    }, opts.debounceMs);
+  }, [opts.debounceMs, submitAutoReport]);
+
+  useEffect(() => {
+    function handleError(event: ErrorEvent) {
+      scheduleSubmission({
+        message: event.message || event.error?.message || 'Unhandled error',
+        stack: event.error?.stack ?? null,
+        timestamp: Date.now(),
+      });
+    }
+
+    function handleRejection(event: PromiseRejectionEvent) {
+      scheduleSubmission(normalizeCapturedError(event.reason));
+    }
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleRejection);
+      window.clearTimeout(debounceTimer.current);
+    };
+  }, [scheduleSubmission]);
+
+  if (toasts.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        right: 20,
+        top: 20,
+        zIndex: 45002,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        maxWidth: 360,
+      }}
+    >
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          role="status"
+          style={{
+            borderRadius: 12,
+            border: `1px solid ${t.failBorder}`,
+            background: t.cardBg,
+            padding: '12px 16px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span style={{ color: t.fail, fontSize: 12, fontWeight: 700 }}>Bug auto-reported</span>
+            <span style={{ color: t.textMuted, fontSize: 11 }}>#{toast.ticketId}</span>
+          </div>
+          <div style={{ color: t.textSecondary, fontSize: 12, lineHeight: 1.4, wordBreak: 'break-word' }}>
+            {toast.summary}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+interface BugReportErrorBoundaryProps {
+  config: BugReportConfig;
+  fallback?: React.ReactNode;
+  children: React.ReactNode;
+}
+
+interface BugReportErrorBoundaryState {
+  error: Error | null;
+  reported: boolean;
+}
+
+export class BugReportErrorBoundary extends React.Component<BugReportErrorBoundaryProps, BugReportErrorBoundaryState> {
+  state: BugReportErrorBoundaryState = { error: null, reported: false };
+
+  static getDerivedStateFromError(error: Error): Partial<BugReportErrorBoundaryState> {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    if (this.state.reported) return;
+    this.setState({ reported: true });
+
+    const { config } = this.props;
+    void this.submitCrashReport(error, errorInfo, config);
+  }
+
+  private async submitCrashReport(
+    error: Error,
+    errorInfo: React.ErrorInfo,
+    config: BugReportConfig
+  ): Promise<void> {
+    try {
+      const [reporter, diagnostics, release, routeContext] = await Promise.all([
+        config.getReporter?.(),
+        config.getDiagnostics?.(),
+        config.getRelease?.(),
+        config.getRouteContext?.(),
+      ]);
+
+      const mergedDiagnostics: BugReportDiagnostics = {
+        ...diagnostics,
+        recentErrors: [{
+          message: error.message,
+          stack: error.stack ?? null,
+          timestamp: Date.now(),
+        }],
+        consoleLogs: getRecentConsoleLogs(),
+        extra: {
+          ...(diagnostics?.extra ?? {}),
+          componentStack: errorInfo.componentStack ?? null,
+        },
+      };
+
+      const payload: BugReportSubmissionPayload = {
+        appSlug: config.appSlug,
+        summary: `[Crash] ${error.message.slice(0, 200)}`,
+        comments: `React render crash.\n\n${error.stack ?? error.message}\n\nComponent stack:\n${errorInfo.componentStack ?? 'N/A'}`,
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight,
+          devicePixelRatio: window.devicePixelRatio || 1,
+        },
+        route: sanitizeValue(routeContext ?? readDefaultRouteContext()) as BugReportRouteContext,
+        user: sanitizeValue(reporter) as BugReportUserContext | undefined,
+        release: sanitizeValue(release) as BugReportReleaseInfo | undefined,
+        diagnostics: sanitizeValue(mergedDiagnostics) as BugReportDiagnostics | undefined,
+        submittedAt: new Date().toISOString(),
+      };
+
+      await config.submitReport(payload);
+    } catch {
+      // Crash report submission failed — nothing we can do
+    }
+  }
+
+  render(): React.ReactNode {
+    if (this.state.error) {
+      return this.props.fallback ?? (
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#ef4444' }}>
+          Something went wrong. A bug report has been submitted automatically. Please refresh the page.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function BugReportProvider({
   config,
   children,
@@ -576,8 +853,11 @@ export function BugReportProvider({
     return { config };
   }, [config]);
 
+  const autoCaptureEnabled = !!(config && config.enabled !== false && config.autoCapture);
+
   return (
     <BugReportContext.Provider value={value}>
+      {autoCaptureEnabled && <AutoBugReporter config={config!} />}
       {children}
     </BugReportContext.Provider>
   );

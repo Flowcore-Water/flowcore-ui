@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
 import type { ThemeColors } from './theme';
 import { AppLauncher } from './AppLauncher';
-import { BugReportProvider, BugReportWidget, type BugReportConfig } from './bugReport';
+import { BugReportProvider, BugReportWidget, BugReportErrorBoundary, type BugReportConfig } from './bugReport';
 import { VersionBanner } from './VersionBanner';
 import { FLOWCORE_APPS } from './appRegistry';
 import type { AppInfo } from './AppLauncher';
@@ -326,7 +326,13 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
           {background}
           <div className="sidebar-shell-content">
             <div className="sidebar-shell-content-inner">
-              {children ?? <Outlet />}
+              {bugReport ? (
+                <BugReportErrorBoundary config={bugReport}>
+                  {children ?? <Outlet />}
+                </BugReportErrorBoundary>
+              ) : (
+                children ?? <Outlet />
+              )}
             </div>
           </div>
         </main>
