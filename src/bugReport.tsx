@@ -188,7 +188,7 @@ function truncateString(value: string): string {
   return `${value.slice(0, MAX_STRING_LENGTH)}…[truncated]`;
 }
 
-function pushCapturedError(nextError: BugReportDiagnosticError): void {
+export function pushCapturedError(nextError: BugReportDiagnosticError): void {
   recentCapturedErrors.unshift(nextError);
   if (recentCapturedErrors.length > MAX_CAPTURED_ERRORS) {
     recentCapturedErrors.length = MAX_CAPTURED_ERRORS;
