@@ -16,7 +16,9 @@ export {
   BugReportErrorBoundary,
   createIdentityBugReportSubmitter,
   getRecentBugReportErrors,
+  getRecentConsoleLogs,
   installBugReportErrorCapture,
+  pushCapturedError,
   resolveIdentityBugReportApiBase,
   useBugReport,
 } from './bugReport';
