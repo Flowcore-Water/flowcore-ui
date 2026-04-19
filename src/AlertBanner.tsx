@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTheme } from './ThemeContext';
+import { pushCapturedError } from './bugReport';
 
 export interface AlertBannerProps {
   variant: 'error' | 'warning' | 'info' | 'success';
@@ -36,6 +37,18 @@ export function AlertBanner({
   const errorObj = error instanceof Error ? error : null;
   const displayMessage = message ?? (errorObj ? errorObj.message : error != null ? String(error) : 'An error occurred');
   const stack = errorObj?.stack ?? null;
+
+  const capturedRef = useRef(false);
+  useEffect(() => {
+    if (variant === 'error' && !capturedRef.current) {
+      capturedRef.current = true;
+      pushCapturedError({
+        message: displayMessage,
+        stack: stack ?? null,
+        timestamp: Date.now(),
+      });
+    }
+  }, [variant, displayMessage, stack]);
 
   const colors = {
     error:   { text: t.fail,    bg: t.failBg,    border: t.failBorder },
