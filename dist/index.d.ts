@@ -10,7 +10,7 @@ export type { SidebarShellProps } from './SidebarShell';
 export { FLOWCORE_APPS } from './appRegistry';
 export { VersionBanner } from './VersionBanner';
 export type { VersionBannerProps } from './VersionBanner';
-export { BugReportProvider, BugReportWidget, BugReportErrorBoundary, createIdentityBugReportSubmitter, getRecentBugReportErrors, installBugReportErrorCapture, resolveIdentityBugReportApiBase, useBugReport, } from './bugReport';
+export { BugReportProvider, BugReportWidget, BugReportErrorBoundary, createIdentityBugReportSubmitter, getRecentBugReportErrors, getRecentConsoleLogs, installBugReportErrorCapture, pushCapturedError, resolveIdentityBugReportApiBase, useBugReport, } from './bugReport';
 export type { AutoCaptureConfig, BugReportConfig, BugReportDiagnostics, BugReportReleaseInfo, BugReportRouteContext, BugReportSubmissionPayload, BugReportSubmissionResult, BugReportUserContext, IdentityBugReportSubmitterOptions, } from './bugReport';
 export { StatCard } from './StatCard';
 export type { StatCardProps } from './StatCard';
