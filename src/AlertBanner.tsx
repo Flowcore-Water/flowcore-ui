@@ -129,7 +129,7 @@ export function AlertBanner({
       <span style={{ flex: 1, color: t.textPrimary }}>{displayMessage}</span>
 
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-        {ghostButton('Copy Error', 'Copied!', copyState === 'copied-error', () => void handleCopy('error'))}
+        {ghostButton(variant === 'error' ? 'Copy Error' : 'Copy Message', 'Copied!', copyState === 'copied-error', () => void handleCopy('error'))}
         {stack && ghostButton('Copy Stack', 'Copied!', copyState === 'copied-stack', () => void handleCopy('stack'))}
         {onRetry && (
           <button
