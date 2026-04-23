@@ -939,13 +939,17 @@ export function BugReportWidget() {
     setIsScreenshotExpanded(false);
     setIsCapturing(true);
     setCaptureError(null);
+    // Hide the modal so it doesn't appear in the screenshot
+    setIsOpen(false);
     try {
-      setScreenshot(await captureManualScreenshot());
+      const captured = await captureManualScreenshot();
+      setScreenshot(captured);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Manual browser capture failed.';
       setCaptureError(message);
     } finally {
       setIsCapturing(false);
+      setIsOpen(true);
     }
   }
 
@@ -1057,7 +1061,7 @@ export function BugReportWidget() {
       <button
         type="button"
         onClick={() => {
-          resetForm();
+          if (result) resetForm();
           setCaptureAttempt((value) => value + 1);
           setIsOpen(true);
         }}
@@ -1203,10 +1207,7 @@ export function BugReportWidget() {
 
       {isOpen && (
         <div
-          onClick={() => {
-            setIsOpen(false);
-            resetForm();
-          }}
+          onClick={() => setIsOpen(false)}
           style={{
             position: 'fixed',
             inset: 0,
@@ -1250,10 +1251,7 @@ export function BugReportWidget() {
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                  resetForm();
-                }}
+                onClick={() => setIsOpen(false)}
                 style={{
                   border: 'none',
                   background: 'transparent',
@@ -1492,10 +1490,7 @@ export function BugReportWidget() {
                 <button
                   type="button"
                   disabled={isSubmitting}
-                  onClick={() => {
-                    setIsOpen(false);
-                    resetForm();
-                  }}
+                  onClick={() => setIsOpen(false)}
                   style={{
                     borderRadius: 8,
                     border: `1px solid ${t.buttonBorder}`,
