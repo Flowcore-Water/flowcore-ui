@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import type { ThemeColors, ThemeName } from './theme';
 import { AppLauncher } from './AppLauncher';
@@ -7,6 +7,7 @@ import { VersionBanner } from './VersionBanner';
 import { ThemeDropdown } from './ThemeDropdown';
 import { useVimNav } from './useVimNav';
 import { KeyboardHelpOverlay } from './KeyboardHelpOverlay';
+import { SpotlightSearch } from './SpotlightSearch';
 import { FLOWCORE_APPS } from './appRegistry';
 import type { AppInfo } from './AppLauncher';
 import type { NavItem, NavEntry, AppShellUser } from './AppShell';
@@ -145,6 +146,8 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
   children,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [launcherOpen, setLauncherOpen] = useState(false);
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
   const navigate = useNavigate();
 
   // Flatten nav items to get paths for Ctrl+b 1-9 jump
@@ -162,8 +165,12 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
           onThemeChange(order[(idx + 1) % order.length]);
         }
       : undefined,
-    onToggleSidebar: () => setMenuOpen((v) => !v),
-    onToggleHelp: undefined,
+    onToggleLeftSidebar: () => setMenuOpen((v) => !v),
+    onToggleLauncher: () => setLauncherOpen((v) => !v),
+    onToggleBugReport: () => {
+      document.dispatchEvent(new CustomEvent('flowcore:open-bug-report'));
+    },
+    onOpenSpotlight: () => setSpotlightOpen((v) => !v),
     onNavJump: (index) => {
       if (index < flatNavPaths.length) {
         navigate(flatNavPaths[index]);
@@ -171,13 +178,6 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
       }
     },
   });
-
-  // Close mobile menu on Escape
-  const handleMenuKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape' && menuOpen) {
-      setMenuOpen(false);
-    }
-  }, [menuOpen]);
 
   const defaultLogo = (
     <img src="/flowcore-logo.svg" alt="Flowcore" className="sidebar-shell-logo" />
@@ -305,7 +305,7 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
                 background: t.surfaceHover,
               }}
             >
-              <AppLauncher apps={apps} currentAppSlug={appSlug} theme={t} dropdownAlign="left" />
+              <AppLauncher apps={apps} currentAppSlug={appSlug} theme={t} dropdownAlign="left" isOpen={launcherOpen} onOpenChange={setLauncherOpen} />
               <div style={{ width: 1, alignSelf: 'stretch', background: t.border }} />
               <span
                 style={{
@@ -432,6 +432,16 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
         </main>
       </div>
       <BugReportWidget />
+      <SpotlightSearch
+        open={spotlightOpen}
+        onClose={() => setSpotlightOpen(false)}
+        theme={t}
+        apps={apps}
+        navItems={navItems}
+        currentAppSlug={appSlug}
+        currentAppTitle={appTitle}
+        onNavigate={(path) => { navigate(path); setSpotlightOpen(false); }}
+      />
     </BugReportProvider>
   );
 };
