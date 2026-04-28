@@ -41,3 +41,7 @@ export { Button } from './Button';
 export type { ButtonProps } from './Button';
 export { AlertBanner } from './AlertBanner';
 export type { AlertBannerProps } from './AlertBanner';
+export { useVimNav } from './useVimNav';
+export type { VimNavCallbacks, VimNavState } from './useVimNav';
+export { KeyboardHelpOverlay } from './KeyboardHelpOverlay';
+export type { KeyboardHelpOverlayProps } from './KeyboardHelpOverlay';

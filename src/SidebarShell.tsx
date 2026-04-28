@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { NavLink, Link, Outlet } from 'react-router-dom';
+import React, { useState, useCallback } from 'react';
+import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import type { ThemeColors, ThemeName } from './theme';
 import { AppLauncher } from './AppLauncher';
 import { BugReportProvider, BugReportWidget, BugReportErrorBoundary, type BugReportConfig } from './bugReport';
 import { VersionBanner } from './VersionBanner';
 import { ThemeDropdown } from './ThemeDropdown';
+import { useVimNav } from './useVimNav';
+import { KeyboardHelpOverlay } from './KeyboardHelpOverlay';
 import { FLOWCORE_APPS } from './appRegistry';
 import type { AppInfo } from './AppLauncher';
 import type { NavItem, NavEntry, AppShellUser } from './AppShell';
@@ -143,6 +145,39 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
   children,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Flatten nav items to get paths for Ctrl+b 1-9 jump
+  const flatNavPaths = navItems.flatMap((entry) =>
+    'kind' in entry && entry.kind === 'group'
+      ? (entry as { items: NavItem[] }).items.map((item) => item.to)
+      : [(entry as NavItem).to],
+  );
+
+  const { prefixActive, helpOpen, toggleHelp } = useVimNav({
+    onCycleTheme: onThemeChange && themeName
+      ? () => {
+          const order: ThemeName[] = ['default', 'retro', 'light'];
+          const idx = order.indexOf(themeName);
+          onThemeChange(order[(idx + 1) % order.length]);
+        }
+      : undefined,
+    onToggleSidebar: () => setMenuOpen((v) => !v),
+    onToggleHelp: undefined,
+    onNavJump: (index) => {
+      if (index < flatNavPaths.length) {
+        navigate(flatNavPaths[index]);
+        setMenuOpen(false);
+      }
+    },
+  });
+
+  // Close mobile menu on Escape
+  const handleMenuKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && menuOpen) {
+      setMenuOpen(false);
+    }
+  }, [menuOpen]);
 
   const defaultLogo = (
     <img src="/flowcore-logo.svg" alt="Flowcore" className="sidebar-shell-logo" />
@@ -151,6 +186,12 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
   return (
     <BugReportProvider config={bugReport}>
       <style>{SIDEBAR_STYLES}</style>
+      {/* Skip link for keyboard nav */}
+      <a href="#main-content" className="flowcore-skip-link">Skip to content</a>
+      {/* Vim prefix indicator */}
+      {prefixActive && <div className="flowcore-vim-prefix">Ctrl+b ...</div>}
+      {/* Keyboard help overlay */}
+      <KeyboardHelpOverlay open={helpOpen} onClose={toggleHelp} t={t} />
       {topBanner}
       <VersionBanner />
 
@@ -337,7 +378,7 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
         </aside>
 
         {/* Main content */}
-        <main style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+        <main id="main-content" style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
           {background}
           <div className="sidebar-shell-content">
             <div className="sidebar-shell-content-inner">
