@@ -12,25 +12,40 @@ interface Binding {
   action: string;
 }
 
-const VIM_BINDINGS: Binding[] = [
-  { keys: 'j / k', action: 'Move down / up' },
-  { keys: 'h / l', action: 'Toggle sidebar' },
-  { keys: '/', action: 'Focus search' },
+const NAV_BINDINGS: Binding[] = [
+  { keys: 'j / k', action: 'Move cursor down / up' },
+  { keys: '{ / }', action: 'Previous / next card' },
   { keys: 'g g', action: 'Go to top' },
   { keys: 'G', action: 'Go to bottom' },
-  { keys: '{ / }', action: 'Previous / next card' },
-  { keys: 'Space', action: 'Open / expand' },
-  { keys: 'Esc', action: 'Close / blur / deselect' },
-  { keys: 'Enter', action: 'Activate focused item' },
-  { keys: 'Ctrl/Cmd+K', action: 'Focus search' },
+  { keys: '/', action: 'Cursor to search' },
+  { keys: 'Space', action: 'Activate selected element' },
+  { keys: 'Enter', action: 'Activate selected element' },
+  { keys: 'Esc', action: 'Exit scope / clear / blur' },
   { keys: '?', action: 'Toggle this help' },
+];
+
+const CLIPBOARD_BINDINGS: Binding[] = [
+  { keys: 'c', action: 'Copy (click copy button)' },
+  { keys: 'y', action: 'Yank record to clipboard' },
+];
+
+const SIDEBAR_BINDINGS: Binding[] = [
+  { keys: '[', action: 'Toggle left sidebar' },
+  { keys: ']', action: 'Toggle right sidebar' },
+  { keys: 'Ctrl+h', action: 'Move to left sidebar' },
+  { keys: 'Ctrl+l', action: 'Move to right sidebar' },
+];
+
+const GLOBAL_BINDINGS: Binding[] = [
+  { keys: 'Ctrl/Cmd+K', action: 'Spotlight search' },
 ];
 
 const TMUX_BINDINGS: Binding[] = [
   { keys: 'Ctrl+b  t', action: 'Cycle theme' },
   { keys: 'Ctrl+b  a', action: 'App launcher' },
+  { keys: 'Ctrl+b  b', action: 'Bug report' },
   { keys: 'Ctrl+b  1-9', action: 'Jump to nav item' },
-  { keys: 'Ctrl+b  s', action: 'Focus search' },
+  { keys: 'Ctrl+b  s', action: 'Cursor to search' },
   { keys: 'Ctrl+b  ?', action: 'Show shortcuts' },
 ];
 
@@ -51,6 +66,27 @@ function BindingRow({ keys, action, t }: Binding & { t: ThemeColors }) {
       }}>
         {keys}
       </kbd>
+    </div>
+  );
+}
+
+function BindingSection({ label, bindings, t, border }: { label: string; bindings: Binding[]; t: ThemeColors; border?: boolean }) {
+  return (
+    <div style={border ? { borderTop: `1px solid ${t.borderSubtle}`, paddingTop: 12, marginTop: 8 } : { marginBottom: 16 }}>
+      <div style={{
+        fontSize: 11,
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        color: t.accent,
+        marginBottom: 8,
+        fontFamily: 'ui-monospace, monospace',
+      }}>
+        {label}
+      </div>
+      {bindings.map((b) => (
+        <BindingRow key={b.keys} {...b} t={t} />
+      ))}
     </div>
   );
 }
@@ -121,40 +157,19 @@ export const KeyboardHelpOverlay: React.FC<KeyboardHelpOverlayProps> = ({ open, 
         </div>
 
         {/* Navigation */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{
-            fontSize: 11,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            color: t.accent,
-            marginBottom: 8,
-            fontFamily: 'ui-monospace, monospace',
-          }}>
-            navigation
-          </div>
-          {VIM_BINDINGS.map((b) => (
-            <BindingRow key={b.keys} {...b} t={t} />
-          ))}
-        </div>
+        <BindingSection label="navigation" bindings={NAV_BINDINGS} t={t} />
+
+        {/* Clipboard */}
+        <BindingSection label="clipboard" bindings={CLIPBOARD_BINDINGS} t={t} border />
+
+        {/* Sidebars */}
+        <BindingSection label="sidebars" bindings={SIDEBAR_BINDINGS} t={t} border />
+
+        {/* Global */}
+        <BindingSection label="global" bindings={GLOBAL_BINDINGS} t={t} border />
 
         {/* App commands */}
-        <div style={{ borderTop: `1px solid ${t.borderSubtle}`, paddingTop: 12 }}>
-          <div style={{
-            fontSize: 11,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            color: t.accent,
-            marginBottom: 8,
-            fontFamily: 'ui-monospace, monospace',
-          }}>
-            app commands (Ctrl+b prefix)
-          </div>
-          {TMUX_BINDINGS.map((b) => (
-            <BindingRow key={b.keys} {...b} t={t} />
-          ))}
-        </div>
+        <BindingSection label="app commands (Ctrl+b prefix)" bindings={TMUX_BINDINGS} t={t} border />
 
         <div style={{
           marginTop: 16,
@@ -163,7 +178,9 @@ export const KeyboardHelpOverlay: React.FC<KeyboardHelpOverlayProps> = ({ open, 
           fontSize: 11,
           color: t.textMuted,
         }}>
-          Keyboard shortcuts are disabled when typing in inputs. Press Esc to blur.
+          Navigation uses a visual cursor (blue outline). Press Space to activate.
+          <br />
+          Shortcuts are disabled when typing in inputs. Press Esc to exit.
         </div>
       </div>
     </div>
