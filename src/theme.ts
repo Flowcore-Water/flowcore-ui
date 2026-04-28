@@ -131,6 +131,9 @@ export const defaultTheme: ThemeColors = {
   buttonText: '#d1dae5',
 };
 
+/** Theme name type for multi-theme support */
+export type ThemeName = 'default' | 'retro' | 'light';
+
 /** Retro theme — synthwave with purple backgrounds and hot pink accents */
 export const retroTheme: ThemeColors = {
   pageBg: '#0d0221',
@@ -185,4 +188,67 @@ export const retroTheme: ThemeColors = {
   buttonBg: '#1a0a2e',
   buttonBorder: '#6b3a9e',
   buttonText: '#d4a0ff',
+};
+
+/** Light theme — brand-aligned light mode using official Flowcore color palette */
+export const lightTheme: ThemeColors = {
+  pageBg: '#F6FBFF',
+  cardBg: '#FFFFFF',
+  navBg: '#FFFFFF',
+  navBorder: '#B8D9F7',
+
+  textPrimary: '#192530',
+  textSecondary: '#475569',
+  textMuted: '#94a3b8',
+
+  accent: '#3794EA',
+  accentDim: '#2F5C85',
+  accentBg: '#E4F2FF',
+
+  success: '#059669',
+  successBg: '#ecfdf5',
+  successBorder: 'rgba(5, 150, 105, 0.25)',
+
+  fail: '#dc2626',
+  failBg: '#fef2f2',
+  failBorder: 'rgba(220, 38, 38, 0.25)',
+
+  warn: '#d97706',
+  warnBg: '#fffbeb',
+  warnBorder: 'rgba(217, 119, 6, 0.25)',
+
+  info: '#3794EA',
+  infoBg: '#E4F2FF',
+  infoBorder: 'rgba(55, 148, 234, 0.25)',
+
+  border: '#B8D9F7',
+  borderSubtle: '#E4F2FF',
+  surfaceHover: 'rgba(55, 148, 234, 0.08)',
+
+  progressTrack: '#E4F2FF',
+  progressFill: '#059669',
+  progressGlow: 'rgba(5, 150, 105, 0.4)',
+
+  logoBg: '#3794EA',
+
+  sectionHeading: '#2F5C85',
+
+  tableHeaderBg: '#E4F2FF',
+  expandedRowBg: '#F0F7FF',
+
+  scoreHot: '#dc2626',
+  scoreWarm: '#d97706',
+
+  inputBg: '#FFFFFF',
+  inputBorder: '#B8D9F7',
+  buttonBg: '#E4F2FF',
+  buttonBorder: '#B8D9F7',
+  buttonText: '#192530',
+};
+
+/** Map theme names to theme objects */
+export const themes: Record<ThemeName, ThemeColors> = {
+  default: defaultTheme,
+  retro: retroTheme,
+  light: lightTheme,
 };

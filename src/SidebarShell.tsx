@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
-import type { ThemeColors } from './theme';
+import type { ThemeColors, ThemeName } from './theme';
 import { AppLauncher } from './AppLauncher';
 import { BugReportProvider, BugReportWidget, BugReportErrorBoundary, type BugReportConfig } from './bugReport';
 import { VersionBanner } from './VersionBanner';
+import { ThemeDropdown } from './ThemeDropdown';
 import { FLOWCORE_APPS } from './appRegistry';
 import type { AppInfo } from './AppLauncher';
 import type { NavItem, NavEntry, AppShellUser } from './AppShell';
@@ -21,8 +22,15 @@ export interface SidebarShellProps {
   user?: AppShellUser;
   /** Logo element rendered at the top of the sidebar */
   logo?: React.ReactNode;
-  /** Optional widget rendered below nav links (e.g. theme toggle) */
+  /**
+   * Optional custom widget rendered below nav links.
+   * @deprecated Pass `themeName` + `onThemeChange` instead to use the built-in ThemeDropdown.
+   */
   themeToggle?: React.ReactNode;
+  /** Current theme name — enables the built-in ThemeDropdown */
+  themeName?: ThemeName;
+  /** Theme change callback — required when using built-in ThemeDropdown */
+  onThemeChange?: (name: ThemeName) => void;
   /** Optional background layer rendered behind main content */
   background?: React.ReactNode;
   /** Banner rendered above everything */
@@ -126,6 +134,8 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
   user,
   logo,
   themeToggle,
+  themeName,
+  onThemeChange,
   background,
   topBanner,
   apps = FLOWCORE_APPS,
@@ -277,9 +287,14 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
 
           {/* Bottom section: theme toggle + user */}
           <div style={{ padding: '12px 16px 16px', borderTop: `1px solid ${t.border}` }}>
-            {themeToggle && (
+            {/* Built-in ThemeDropdown when themeName + onThemeChange are provided */}
+            {themeName && onThemeChange ? (
+              <div style={{ marginBottom: user ? 12 : 0 }}>
+                <ThemeDropdown theme={themeName} onSelect={onThemeChange} t={t} />
+              </div>
+            ) : themeToggle ? (
               <div style={{ marginBottom: user ? 12 : 0 }}>{themeToggle}</div>
-            )}
+            ) : null}
 
             {user && (
               <div>
