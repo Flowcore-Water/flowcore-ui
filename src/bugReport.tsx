@@ -887,6 +887,17 @@ export function BugReportWidget() {
   const [feedbackPending, setFeedbackPending] = useState<string | null>(null);
   const [relatedToTicketId, setRelatedToTicketId] = useState<string | null>(null);
 
+  // Listen for external open trigger (e.g. Ctrl+b b keyboard shortcut)
+  useEffect(() => {
+    const handler = () => {
+      if (result) resetForm();
+      setCaptureAttempt((v) => v + 1);
+      setIsOpen(true);
+    };
+    document.addEventListener('flowcore:open-bug-report', handler);
+    return () => document.removeEventListener('flowcore:open-bug-report', handler);
+  }, [result]);
+
   const pendingFeedbackCount = myBugs.filter((b) => b.status === 'resolved').length;
 
   const config = bugReport?.config;
