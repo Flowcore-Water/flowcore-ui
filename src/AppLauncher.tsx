@@ -14,10 +14,20 @@ export interface AppLauncherProps {
   theme: ThemeColors;
   /** Which edge of the button the dropdown aligns to. Default 'right'. */
   dropdownAlign?: 'left' | 'right';
+  /** Controlled mode: external open state */
+  isOpen?: boolean;
+  /** Controlled mode: callback when open state should change */
+  onOpenChange?: (open: boolean) => void;
 }
 
-export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, theme: t, dropdownAlign = 'right' }) => {
-  const [open, setOpen] = useState(false);
+export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, theme: t, dropdownAlign = 'right', isOpen, onOpenChange }) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isOpen !== undefined ? isOpen : internalOpen;
+  const setOpen = (next: boolean | ((prev: boolean) => boolean)) => {
+    const resolved = typeof next === 'function' ? next(open) : next;
+    if (onOpenChange) onOpenChange(resolved);
+    else setInternalOpen(resolved);
+  };
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

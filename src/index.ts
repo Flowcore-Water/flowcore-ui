@@ -45,3 +45,5 @@ export { useVimNav } from './useVimNav';
 export type { VimNavCallbacks, VimNavState } from './useVimNav';
 export { KeyboardHelpOverlay } from './KeyboardHelpOverlay';
 export type { KeyboardHelpOverlayProps } from './KeyboardHelpOverlay';
+export { SpotlightSearch } from './SpotlightSearch';
+export type { SpotlightSearchProps } from './SpotlightSearch';
