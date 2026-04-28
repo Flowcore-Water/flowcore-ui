@@ -186,10 +186,48 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
   return (
     <BugReportProvider config={bugReport}>
       <style>{SIDEBAR_STYLES}</style>
-      {/* Skip link for keyboard nav */}
-      <a href="#main-content" className="flowcore-skip-link">Skip to content</a>
-      {/* Vim prefix indicator */}
-      {prefixActive && <div className="flowcore-vim-prefix">Ctrl+b ...</div>}
+      {/* Skip link for keyboard nav — inline styles because apps don't import base.css */}
+      <a
+        href="#main-content"
+        style={{
+          position: 'fixed',
+          top: -100,
+          left: 16,
+          zIndex: 9999,
+          padding: '8px 16px',
+          fontSize: 14,
+          fontWeight: 600,
+          color: '#fff',
+          background: '#3794EA',
+          borderRadius: '0 0 8px 8px',
+          textDecoration: 'none',
+          transition: 'top 150ms ease-out',
+        }}
+        onFocus={(e) => { e.currentTarget.style.top = '0px'; }}
+        onBlur={(e) => { e.currentTarget.style.top = '-100px'; }}
+      >
+        Skip to content
+      </a>
+      {/* Prefix indicator — fixed overlay, never pushes layout */}
+      {prefixActive && (
+        <div style={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          zIndex: 9999,
+          padding: '6px 12px',
+          fontSize: 12,
+          fontWeight: 700,
+          fontFamily: 'ui-monospace, monospace',
+          color: t.accent,
+          background: `${t.accent}20`,
+          border: `1px solid ${t.accent}4d`,
+          borderRadius: 8,
+          pointerEvents: 'none',
+        }}>
+          Ctrl+b ...
+        </div>
+      )}
       {/* Keyboard help overlay */}
       <KeyboardHelpOverlay open={helpOpen} onClose={toggleHelp} t={t} />
       {topBanner}

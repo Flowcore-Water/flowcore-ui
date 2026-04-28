@@ -18,9 +18,11 @@ const VIM_BINDINGS: Binding[] = [
   { keys: '/', action: 'Focus search' },
   { keys: 'g g', action: 'Go to top' },
   { keys: 'G', action: 'Go to bottom' },
-  { keys: 'o', action: 'Open / expand' },
+  { keys: '{ / }', action: 'Previous / next card' },
+  { keys: 'Space', action: 'Open / expand' },
   { keys: 'Esc', action: 'Close / blur / deselect' },
   { keys: 'Enter', action: 'Activate focused item' },
+  { keys: 'Ctrl/Cmd+K', action: 'Focus search' },
   { keys: '?', action: 'Toggle this help' },
 ];
 
@@ -118,8 +120,8 @@ export const KeyboardHelpOverlay: React.FC<KeyboardHelpOverlayProps> = ({ open, 
           </button>
         </div>
 
-        {/* Vim section */}
-        <div style={{ marginBottom: 20 }}>
+        {/* Navigation */}
+        <div style={{ marginBottom: 16 }}>
           <div style={{
             fontSize: 11,
             fontWeight: 700,
@@ -129,15 +131,15 @@ export const KeyboardHelpOverlay: React.FC<KeyboardHelpOverlayProps> = ({ open, 
             marginBottom: 8,
             fontFamily: 'ui-monospace, monospace',
           }}>
-            vim
+            navigation
           </div>
           {VIM_BINDINGS.map((b) => (
             <BindingRow key={b.keys} {...b} t={t} />
           ))}
         </div>
 
-        {/* Tmux section */}
-        <div style={{ borderTop: `1px solid ${t.borderSubtle}`, paddingTop: 16 }}>
+        {/* App commands */}
+        <div style={{ borderTop: `1px solid ${t.borderSubtle}`, paddingTop: 12 }}>
           <div style={{
             fontSize: 11,
             fontWeight: 700,
@@ -147,7 +149,7 @@ export const KeyboardHelpOverlay: React.FC<KeyboardHelpOverlayProps> = ({ open, 
             marginBottom: 8,
             fontFamily: 'ui-monospace, monospace',
           }}>
-            tmux (Ctrl+b prefix)
+            app commands (Ctrl+b prefix)
           </div>
           {TMUX_BINDINGS.map((b) => (
             <BindingRow key={b.keys} {...b} t={t} />

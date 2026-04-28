@@ -81,11 +81,32 @@ function getFocusableElements(container?: HTMLElement): HTMLElement[] {
 }
 
 function findSearchInput(): HTMLInputElement | null {
-  // Look for search inputs by common patterns
   const candidates = document.querySelectorAll<HTMLInputElement>(
     'input[type="search"], input[placeholder*="earch"], input[placeholder*="ilter"], input[aria-label*="earch"]'
   );
   return candidates[0] || null;
+}
+
+const CARD_SELECTOR = [
+  '[class*="rounded-xl"][class*="border"]',
+  '[class*="rounded-lg"][class*="border"]',
+  '[style*="borderRadius"]',
+  '[role="article"]',
+  '[role="listitem"]',
+].join(',');
+
+function getCardElements(): HTMLElement[] {
+  const root = document.querySelector('main') || document.body;
+  return Array.from(root.querySelectorAll<HTMLElement>(CARD_SELECTOR))
+    .filter((el) => {
+      const rect = el.getBoundingClientRect();
+      return rect.width > 100 && rect.height > 40;
+    });
+}
+
+function focusSearch() {
+  const search = findSearchInput();
+  if (search) search.focus();
 }
 
 export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
@@ -132,7 +153,36 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
       elements[nextIdx]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
 
+    function moveCard(direction: 1 | -1) {
+      const cards = getCardElements();
+      if (cards.length === 0) return;
+      // Find which card contains the active element or is closest
+      const active = document.activeElement as HTMLElement;
+      let currentIdx = -1;
+      if (active) {
+        currentIdx = cards.findIndex((card) => card.contains(active) || card === active);
+      }
+      let nextIdx = currentIdx === -1
+        ? (direction === 1 ? 0 : cards.length - 1)
+        : currentIdx + direction;
+      if (nextIdx < 0) nextIdx = 0;
+      if (nextIdx >= cards.length) nextIdx = cards.length - 1;
+      const target = cards[nextIdx];
+      target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      // Focus the first focusable element inside the card, or the card itself
+      const inner = target.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (inner) inner.focus();
+      else { target.tabIndex = -1; target.focus(); }
+    }
+
     function handleKeyDown(e: KeyboardEvent) {
+      // --- Ctrl/Cmd+K: universal search (works even in inputs) ---
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        focusSearch();
+        return;
+      }
+
       // --- Tmux prefix handling ---
       if (e.ctrlKey && e.key === 'b' && !isInputFocused()) {
         e.preventDefault();
@@ -157,11 +207,9 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
             callbacksRef.current.onToggleLauncher?.();
             return;
           case 's':
-          case '/': {
-            const search = findSearchInput();
-            if (search) search.focus();
+          case '/':
+            focusSearch();
             return;
-          }
           case '?':
             setHelpOpen((v) => !v);
             callbacksRef.current.onToggleHelp?.();
@@ -216,10 +264,7 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
 
         case '/':
           e.preventDefault();
-          {
-            const search = findSearchInput();
-            if (search) search.focus();
-          }
+          focusSearch();
           return;
 
         case 'g':
@@ -245,12 +290,24 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
           }
           return;
 
-        case 'o': {
-          // Expand/collapse: click the focused element if it looks expandable
-          const active = document.activeElement as HTMLElement;
-          if (active) active.click();
+        case ' ':
+          e.preventDefault();
+          {
+            // Space: expand/collapse the focused element
+            const active = document.activeElement as HTMLElement;
+            if (active) active.click();
+          }
           return;
-        }
+
+        case '}':
+          e.preventDefault();
+          moveCard(1);
+          return;
+
+        case '{':
+          e.preventDefault();
+          moveCard(-1);
+          return;
 
         case '?':
           e.preventDefault();
