@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { NavLink, Link, Outlet } from 'react-router-dom';
-import type { ThemeColors } from './theme';
+import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
+import type { ThemeColors, ThemeName } from './theme';
 import { AppLauncher } from './AppLauncher';
 import { BugReportProvider, BugReportWidget, BugReportErrorBoundary, type BugReportConfig } from './bugReport';
 import { VersionBanner } from './VersionBanner';
+import { ThemeDropdown } from './ThemeDropdown';
+import { useVimNav } from './useVimNav';
+import { KeyboardHelpOverlay } from './KeyboardHelpOverlay';
+import { SpotlightSearch } from './SpotlightSearch';
 import { FLOWCORE_APPS } from './appRegistry';
 import type { AppInfo } from './AppLauncher';
 import type { NavItem, NavEntry, AppShellUser } from './AppShell';
@@ -21,8 +25,15 @@ export interface SidebarShellProps {
   user?: AppShellUser;
   /** Logo element rendered at the top of the sidebar */
   logo?: React.ReactNode;
-  /** Optional widget rendered below nav links (e.g. theme toggle) */
+  /**
+   * Optional custom widget rendered below nav links.
+   * @deprecated Pass `themeName` + `onThemeChange` instead to use the built-in ThemeDropdown.
+   */
   themeToggle?: React.ReactNode;
+  /** Current theme name — enables the built-in ThemeDropdown */
+  themeName?: ThemeName;
+  /** Theme change callback — required when using built-in ThemeDropdown */
+  onThemeChange?: (name: ThemeName) => void;
   /** Optional background layer rendered behind main content */
   background?: React.ReactNode;
   /** Banner rendered above everything */
@@ -126,6 +137,8 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
   user,
   logo,
   themeToggle,
+  themeName,
+  onThemeChange,
   background,
   topBanner,
   apps = FLOWCORE_APPS,
@@ -133,6 +146,38 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
   children,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [launcherOpen, setLauncherOpen] = useState(false);
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Flatten nav items to get paths for Ctrl+b 1-9 jump
+  const flatNavPaths = navItems.flatMap((entry) =>
+    'kind' in entry && entry.kind === 'group'
+      ? (entry as { items: NavItem[] }).items.map((item) => item.to)
+      : [(entry as NavItem).to],
+  );
+
+  const { prefixActive, helpOpen, toggleHelp } = useVimNav({
+    onCycleTheme: onThemeChange && themeName
+      ? () => {
+          const order: ThemeName[] = ['default', 'retro', 'light'];
+          const idx = order.indexOf(themeName);
+          onThemeChange(order[(idx + 1) % order.length]);
+        }
+      : undefined,
+    onToggleLeftSidebar: () => setMenuOpen((v) => !v),
+    onToggleLauncher: () => setLauncherOpen((v) => !v),
+    onToggleBugReport: () => {
+      document.dispatchEvent(new CustomEvent('flowcore:open-bug-report'));
+    },
+    onOpenSpotlight: () => setSpotlightOpen((v) => !v),
+    onNavJump: (index) => {
+      if (index < flatNavPaths.length) {
+        navigate(flatNavPaths[index]);
+        setMenuOpen(false);
+      }
+    },
+  });
 
   const defaultLogo = (
     <img src="/flowcore-logo.svg" alt="Flowcore" className="sidebar-shell-logo" />
@@ -141,6 +186,50 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
   return (
     <BugReportProvider config={bugReport}>
       <style>{SIDEBAR_STYLES}</style>
+      {/* Skip link for keyboard nav — inline styles because apps don't import base.css */}
+      <a
+        href="#main-content"
+        style={{
+          position: 'fixed',
+          top: -100,
+          left: 16,
+          zIndex: 9999,
+          padding: '8px 16px',
+          fontSize: 14,
+          fontWeight: 600,
+          color: '#fff',
+          background: '#3794EA',
+          borderRadius: '0 0 8px 8px',
+          textDecoration: 'none',
+          transition: 'top 150ms ease-out',
+        }}
+        onFocus={(e) => { e.currentTarget.style.top = '0px'; }}
+        onBlur={(e) => { e.currentTarget.style.top = '-100px'; }}
+      >
+        Skip to content
+      </a>
+      {/* Prefix indicator — fixed overlay, never pushes layout */}
+      {prefixActive && (
+        <div style={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          zIndex: 9999,
+          padding: '6px 12px',
+          fontSize: 12,
+          fontWeight: 700,
+          fontFamily: 'ui-monospace, monospace',
+          color: t.accent,
+          background: `${t.accent}20`,
+          border: `1px solid ${t.accent}4d`,
+          borderRadius: 8,
+          pointerEvents: 'none',
+        }}>
+          Ctrl+b ...
+        </div>
+      )}
+      {/* Keyboard help overlay */}
+      <KeyboardHelpOverlay open={helpOpen} onClose={toggleHelp} t={t} />
       {topBanner}
       <VersionBanner />
 
@@ -216,7 +305,7 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
                 background: t.surfaceHover,
               }}
             >
-              <AppLauncher apps={apps} currentAppSlug={appSlug} theme={t} dropdownAlign="left" />
+              <AppLauncher apps={apps} currentAppSlug={appSlug} theme={t} dropdownAlign="left" isOpen={launcherOpen} onOpenChange={setLauncherOpen} />
               <div style={{ width: 1, alignSelf: 'stretch', background: t.border }} />
               <span
                 style={{
@@ -277,9 +366,14 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
 
           {/* Bottom section: theme toggle + user */}
           <div style={{ padding: '12px 16px 16px', borderTop: `1px solid ${t.border}` }}>
-            {themeToggle && (
+            {/* Built-in ThemeDropdown when themeName + onThemeChange are provided */}
+            {themeName && onThemeChange ? (
+              <div style={{ marginBottom: user ? 12 : 0 }}>
+                <ThemeDropdown theme={themeName} onSelect={onThemeChange} t={t} />
+              </div>
+            ) : themeToggle ? (
               <div style={{ marginBottom: user ? 12 : 0 }}>{themeToggle}</div>
-            )}
+            ) : null}
 
             {user && (
               <div>
@@ -322,7 +416,7 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
         </aside>
 
         {/* Main content */}
-        <main style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+        <main id="main-content" style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
           {background}
           <div className="sidebar-shell-content">
             <div className="sidebar-shell-content-inner">
@@ -338,6 +432,16 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
         </main>
       </div>
       <BugReportWidget />
+      <SpotlightSearch
+        open={spotlightOpen}
+        onClose={() => setSpotlightOpen(false)}
+        theme={t}
+        apps={apps}
+        navItems={navItems}
+        currentAppSlug={appSlug}
+        currentAppTitle={appTitle}
+        onNavigate={(path) => { navigate(path); setSpotlightOpen(false); }}
+      />
     </BugReportProvider>
   );
 };
