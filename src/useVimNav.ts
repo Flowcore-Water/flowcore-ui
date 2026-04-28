@@ -3,23 +3,40 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 /**
  * Vim/tmux-style keyboard navigation for Flowcore apps.
  *
- * Vim layer (active when not in an input):
- *   j/k     move down/up through focusable items
- *   h/l     collapse/expand sidebar or move between tabs
- *   /       focus search input
- *   gg      scroll to top / first item
- *   G       scroll to bottom / last item
- *   Esc     close modal, blur input, deselect
- *   Enter   activate focused item
- *   o       expand/collapse focused row
- *   ?       toggle keyboard help overlay
+ * Uses a VISUAL CURSOR (border highlight) instead of DOM focus.
+ * Navigation keys move the cursor; Space activates the cursored element.
  *
- * Tmux layer (Ctrl+b prefix):
- *   Ctrl+b then t   cycle theme
- *   Ctrl+b then a   open app launcher
- *   Ctrl+b then 1-9 jump to nav item by position
- *   Ctrl+b then s   focus search
- *   Ctrl+b then ?   show all shortcuts
+ * NAVIGATION:
+ *   j/k        move cursor down/up within current scope
+ *   { / }      move cursor between cards (top-level containers)
+ *   g g        scroll to top, cursor on first element
+ *   G          scroll to bottom, cursor on last element
+ *   Space      activate cursored element (focus inputs, click buttons)
+ *   Enter      activate cursored element
+ *   Esc        exit scope / clear cursor / close modal / blur input
+ *   /          cursor to search input
+ *   ?          toggle keyboard help overlay
+ *
+ * CLIPBOARD:
+ *   c          copy (clicks nearest copy button on cursored element)
+ *   y          yank whole record text to clipboard
+ *
+ * SIDEBARS:
+ *   [          toggle left sidebar
+ *   ]          toggle right sidebar
+ *   Ctrl+h     move cursor scope to left sidebar
+ *   Ctrl+l     move cursor scope to right sidebar
+ *
+ * GLOBAL:
+ *   Ctrl/Cmd+K open spotlight search
+ *
+ * TMUX LAYER (Ctrl+b prefix):
+ *   Ctrl+b t   cycle theme
+ *   Ctrl+b a   open app launcher
+ *   Ctrl+b b   open bug report
+ *   Ctrl+b 1-9 jump to nav item
+ *   Ctrl+b s   cursor to search
+ *   Ctrl+b ?   show all shortcuts
  */
 
 export interface VimNavCallbacks {
@@ -29,10 +46,18 @@ export interface VimNavCallbacks {
   onToggleLauncher?: () => void;
   /** Called when help overlay toggle is requested (?) */
   onToggleHelp?: () => void;
-  /** Called when sidebar toggle is requested (h/l) */
+  /** @deprecated Use onToggleLeftSidebar */
   onToggleSidebar?: () => void;
+  /** Called when left sidebar toggle is requested ([) */
+  onToggleLeftSidebar?: () => void;
+  /** Called when right sidebar toggle is requested (]) */
+  onToggleRightSidebar?: () => void;
   /** Called when nav item jump is requested (Ctrl+b 1-9) */
   onNavJump?: (index: number) => void;
+  /** Called when bug report toggle is requested (Ctrl+b b) */
+  onToggleBugReport?: () => void;
+  /** Called when spotlight search is requested (Ctrl/Cmd+K) */
+  onOpenSpotlight?: () => void;
 }
 
 export interface VimNavState {
@@ -43,6 +68,30 @@ export interface VimNavState {
   /** Toggle help overlay */
   toggleHelp: () => void;
 }
+
+/* ─── Cursor style injection ───────────────────────────────────────── */
+
+const CURSOR_STYLE_ID = 'vim-nav-cursor-styles';
+const CURSOR_CSS = `
+.vim-cursor {
+  outline: 2px solid #3794EA !important;
+  outline-offset: 2px;
+}
+.vim-scope {
+  outline: 1px dashed rgba(55, 148, 234, 0.35) !important;
+  outline-offset: 4px;
+}
+`;
+
+function ensureCursorStyles(): void {
+  if (document.getElementById(CURSOR_STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = CURSOR_STYLE_ID;
+  style.textContent = CURSOR_CSS;
+  document.head.appendChild(style);
+}
+
+/* ─── DOM helpers ──────────────────────────────────────────────────── */
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -68,26 +117,19 @@ function isInputFocused(): boolean {
   return false;
 }
 
-function getFocusableElements(container?: HTMLElement): HTMLElement[] {
-  const root = container || document.querySelector('main') || document.body;
-  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
-    .filter((el) => {
-      // Skip hidden elements
-      if (el.offsetParent === null && el.tagName !== 'BODY') return false;
-      // Skip elements in closed dropdowns
-      const rect = el.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
-    });
+function isVisible(el: HTMLElement): boolean {
+  if (el.offsetParent === null && el.tagName !== 'BODY') return false;
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
 }
 
-function findSearchInput(): HTMLInputElement | null {
-  const candidates = document.querySelectorAll<HTMLInputElement>(
-    'input[type="search"], input[placeholder*="earch"], input[placeholder*="ilter"], input[aria-label*="earch"]'
-  );
-  return candidates[0] || null;
+function getFocusableElements(container?: HTMLElement | null): HTMLElement[] {
+  const root = container || document.querySelector('main') || document.body;
+  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(isVisible);
 }
 
 const CARD_SELECTOR = [
+  '[data-vim-card]',
   '[class*="rounded-xl"][class*="border"]',
   '[class*="rounded-lg"][class*="border"]',
   '[style*="borderRadius"]',
@@ -97,17 +139,49 @@ const CARD_SELECTOR = [
 
 function getCardElements(): HTMLElement[] {
   const root = document.querySelector('main') || document.body;
-  return Array.from(root.querySelectorAll<HTMLElement>(CARD_SELECTOR))
-    .filter((el) => {
-      const rect = el.getBoundingClientRect();
-      return rect.width > 100 && rect.height > 40;
-    });
+  return Array.from(root.querySelectorAll<HTMLElement>(CARD_SELECTOR)).filter((el) => {
+    const rect = el.getBoundingClientRect();
+    return rect.width > 100 && rect.height > 40;
+  });
 }
 
-function focusSearch() {
-  const search = findSearchInput();
-  if (search) search.focus();
+function findSearchInput(): HTMLInputElement | null {
+  const candidates = document.querySelectorAll<HTMLInputElement>(
+    'input[type="search"], input[placeholder*="earch"], input[placeholder*="ilter"], input[aria-label*="earch"]',
+  );
+  return candidates[0] || null;
 }
+
+/** Returns true when the element contains enough focusable children to drill into. */
+function hasSubElements(el: HTMLElement): boolean {
+  return getFocusableElements(el).length > 2;
+}
+
+function findCopyButton(el: HTMLElement): HTMLButtonElement | null {
+  const selectors = 'button[aria-label*="opy"], button[title*="opy"], [data-copy-button]';
+  const direct = el.querySelectorAll<HTMLButtonElement>(selectors);
+  if (direct.length > 0) return direct[0];
+  const row = el.closest('tr, [role="row"], [data-vim-card]');
+  if (row) {
+    const rowBtns = row.querySelectorAll<HTMLButtonElement>(selectors);
+    if (rowBtns.length > 0) return rowBtns[0];
+  }
+  return null;
+}
+
+function yankRecord(el: HTMLElement): string {
+  const row = el.closest('tr, [role="row"], [data-vim-card]') || el;
+  const cells = row.querySelectorAll('td, th, [role="cell"], [role="gridcell"]');
+  if (cells.length > 0) {
+    return Array.from(cells)
+      .map((c) => c.textContent?.trim())
+      .filter(Boolean)
+      .join('\t');
+  }
+  return row.textContent?.trim() || '';
+}
+
+/* ─── Hook ─────────────────────────────────────────────────────────── */
 
 export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
   const prefixRef = useRef(false);
@@ -119,9 +193,30 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
   const callbacksRef = useRef(callbacks);
   callbacksRef.current = callbacks;
 
+  // Visual cursor and scope tracking
+  const cursorRef = useRef<HTMLElement | null>(null);
+  const scopeRef = useRef<HTMLElement | null>(null);
+
   const toggleHelp = useCallback(() => setHelpOpen((v) => !v), []);
 
+  const setCursor = useCallback((el: HTMLElement | null) => {
+    if (cursorRef.current) cursorRef.current.classList.remove('vim-cursor');
+    cursorRef.current = el;
+    if (el) {
+      el.classList.add('vim-cursor');
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, []);
+
+  const setScope = useCallback((el: HTMLElement | null) => {
+    if (scopeRef.current) scopeRef.current.classList.remove('vim-scope');
+    scopeRef.current = el;
+    if (el) el.classList.add('vim-scope');
+  }, []);
+
   useEffect(() => {
+    ensureCursorStyles();
+
     function clearPrefix() {
       prefixRef.current = false;
       setPrefixActive(false);
@@ -133,72 +228,113 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
       if (gTimerRef.current) clearTimeout(gTimerRef.current);
     }
 
-    function moveFocus(direction: 1 | -1) {
-      const elements = getFocusableElements();
+    function moveCursor(direction: 1 | -1) {
+      const elements = getFocusableElements(scopeRef.current);
       if (elements.length === 0) return;
 
-      const currentIdx = elements.indexOf(document.activeElement as HTMLElement);
+      const currentIdx = cursorRef.current ? elements.indexOf(cursorRef.current) : -1;
       let nextIdx: number;
-
       if (currentIdx === -1) {
-        // Nothing focused in main content; focus first/last depending on direction
         nextIdx = direction === 1 ? 0 : elements.length - 1;
       } else {
         nextIdx = currentIdx + direction;
         if (nextIdx < 0) nextIdx = 0;
         if (nextIdx >= elements.length) nextIdx = elements.length - 1;
       }
-
-      elements[nextIdx]?.focus();
-      elements[nextIdx]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      setCursor(elements[nextIdx]);
     }
 
     function moveCard(direction: 1 | -1) {
       const cards = getCardElements();
       if (cards.length === 0) return;
-      // Find which card contains the active element or is closest
-      const active = document.activeElement as HTMLElement;
+
       let currentIdx = -1;
-      if (active) {
-        currentIdx = cards.findIndex((card) => card.contains(active) || card === active);
+      if (cursorRef.current) {
+        currentIdx = cards.findIndex(
+          (card) => card.contains(cursorRef.current!) || card === cursorRef.current,
+        );
       }
-      let nextIdx = currentIdx === -1
-        ? (direction === 1 ? 0 : cards.length - 1)
-        : currentIdx + direction;
+
+      let nextIdx =
+        currentIdx === -1 ? (direction === 1 ? 0 : cards.length - 1) : currentIdx + direction;
       if (nextIdx < 0) nextIdx = 0;
       if (nextIdx >= cards.length) nextIdx = cards.length - 1;
+
       const target = cards[nextIdx];
-      target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      // Focus the first focusable element inside the card, or the card itself
-      const inner = target.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-      if (inner) inner.focus();
-      else { target.tabIndex = -1; target.focus(); }
+      setCursor(target);
+
+      // Auto-scope cards that contain enough sub-elements for drill-in
+      if (hasSubElements(target)) {
+        setScope(target);
+      } else {
+        setScope(null);
+      }
+    }
+
+    function activateCursor() {
+      const el = cursorRef.current;
+      if (!el) return;
+      const tag = el.tagName;
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        (el as HTMLElement).isContentEditable
+      ) {
+        el.focus();
+      } else {
+        el.click();
+      }
     }
 
     function handleKeyDown(e: KeyboardEvent) {
-      // --- Ctrl/Cmd+K: universal search (works even in inputs) ---
+      // ── Ctrl/Cmd+K: spotlight search (works even in inputs) ──
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        focusSearch();
+        callbacksRef.current.onOpenSpotlight?.();
         return;
       }
 
-      // --- Tmux prefix handling ---
+      // ── Ctrl+h: move cursor scope to left sidebar ──
+      if (e.ctrlKey && e.key === 'h' && !isInputFocused()) {
+        e.preventDefault();
+        const sidebar = document.querySelector<HTMLElement>('.sidebar-shell-aside, aside');
+        if (sidebar) {
+          setScope(sidebar);
+          const items = getFocusableElements(sidebar);
+          if (items.length > 0) setCursor(items[0]);
+        }
+        return;
+      }
+
+      // ── Ctrl+l: move cursor scope to right sidebar ──
+      if (e.ctrlKey && e.key === 'l' && !isInputFocused()) {
+        e.preventDefault();
+        const rightPanel = document.querySelector<HTMLElement>(
+          '[data-sidebar="right"], .sidebar-right, [data-panel="right"]',
+        );
+        if (rightPanel) {
+          setScope(rightPanel);
+          const items = getFocusableElements(rightPanel);
+          if (items.length > 0) setCursor(items[0]);
+        }
+        return;
+      }
+
+      // ── Tmux prefix (Ctrl+b) ──
       if (e.ctrlKey && e.key === 'b' && !isInputFocused()) {
         e.preventDefault();
         prefixRef.current = true;
         setPrefixActive(true);
-        // Auto-clear prefix after 2 seconds
         if (prefixTimerRef.current) clearTimeout(prefixTimerRef.current);
         prefixTimerRef.current = setTimeout(clearPrefix, 2000);
         return;
       }
 
-      // If prefix is active, handle tmux commands
+      // ── Tmux commands (prefix active) ──
       if (prefixRef.current) {
         e.preventDefault();
         clearPrefix();
-
         switch (e.key) {
           case 't':
             callbacksRef.current.onCycleTheme?.();
@@ -206,16 +342,20 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
           case 'a':
             callbacksRef.current.onToggleLauncher?.();
             return;
-          case 's':
-          case '/':
-            focusSearch();
+          case 'b':
+            callbacksRef.current.onToggleBugReport?.();
             return;
+          case 's':
+          case '/': {
+            const search = findSearchInput();
+            if (search) setCursor(search);
+            return;
+          }
           case '?':
             setHelpOpen((v) => !v);
             callbacksRef.current.onToggleHelp?.();
             return;
           default:
-            // Ctrl+b then 1-9: nav jump
             if (e.key >= '1' && e.key <= '9') {
               callbacksRef.current.onNavJump?.(parseInt(e.key, 10) - 1);
               return;
@@ -224,7 +364,7 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
         return;
       }
 
-      // --- Esc: always works, even in inputs ---
+      // ── Escape: always works, even in inputs ──
       if (e.key === 'Escape') {
         if (helpOpen) {
           setHelpOpen(false);
@@ -234,47 +374,50 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
           (document.activeElement as HTMLElement)?.blur();
           return;
         }
-        // Let modals/dropdowns handle their own Esc
+        // Exit scope first, then clear cursor
+        if (scopeRef.current) {
+          const card = scopeRef.current;
+          setScope(null);
+          setCursor(card);
+          return;
+        }
+        if (cursorRef.current) {
+          setCursor(null);
+          return;
+        }
         return;
       }
 
-      // --- All vim keys below require NOT being in an input ---
+      // ── All vim keys below require NOT being in an input ──
       if (isInputFocused()) return;
 
       switch (e.key) {
         case 'j':
           e.preventDefault();
-          moveFocus(1);
+          moveCursor(1);
           return;
 
         case 'k':
           e.preventDefault();
-          moveFocus(-1);
-          return;
-
-        case 'h':
-          e.preventDefault();
-          callbacksRef.current.onToggleSidebar?.();
-          return;
-
-        case 'l':
-          e.preventDefault();
-          callbacksRef.current.onToggleSidebar?.();
+          moveCursor(-1);
           return;
 
         case '/':
           e.preventDefault();
-          focusSearch();
+          {
+            const search = findSearchInput();
+            if (search) setCursor(search);
+          }
           return;
 
         case 'g':
           if (gPendingRef.current) {
-            // gg: go to top
             e.preventDefault();
             clearG();
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            setScope(null);
             const elements = getFocusableElements();
-            if (elements.length > 0) elements[0].focus();
+            if (elements.length > 0) setCursor(elements[0]);
           } else {
             gPendingRef.current = true;
             gTimerRef.current = setTimeout(clearG, 500);
@@ -284,18 +427,22 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
         case 'G':
           e.preventDefault();
           window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+          setScope(null);
           {
             const elements = getFocusableElements();
-            if (elements.length > 0) elements[elements.length - 1].focus();
+            if (elements.length > 0) setCursor(elements[elements.length - 1]);
           }
           return;
 
         case ' ':
           e.preventDefault();
-          {
-            // Space: expand/collapse the focused element
-            const active = document.activeElement as HTMLElement;
-            if (active) active.click();
+          activateCursor();
+          return;
+
+        case 'Enter':
+          if (cursorRef.current) {
+            e.preventDefault();
+            activateCursor();
           }
           return;
 
@@ -309,14 +456,38 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
           moveCard(-1);
           return;
 
+        case '[':
+          e.preventDefault();
+          (
+            callbacksRef.current.onToggleLeftSidebar ?? callbacksRef.current.onToggleSidebar
+          )?.();
+          return;
+
+        case ']':
+          e.preventDefault();
+          callbacksRef.current.onToggleRightSidebar?.();
+          return;
+
+        case 'c':
+          e.preventDefault();
+          if (cursorRef.current) {
+            const copyBtn = findCopyButton(cursorRef.current);
+            if (copyBtn) copyBtn.click();
+          }
+          return;
+
+        case 'y':
+          e.preventDefault();
+          if (cursorRef.current) {
+            const text = yankRecord(cursorRef.current);
+            if (text) void navigator.clipboard.writeText(text);
+          }
+          return;
+
         case '?':
           e.preventDefault();
           setHelpOpen((v) => !v);
           callbacksRef.current.onToggleHelp?.();
-          return;
-
-        case 'Enter':
-          // Let default behavior handle it (click on focused element)
           return;
       }
     }
@@ -326,8 +497,10 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
       document.removeEventListener('keydown', handleKeyDown);
       clearPrefix();
       clearG();
+      if (cursorRef.current) cursorRef.current.classList.remove('vim-cursor');
+      if (scopeRef.current) scopeRef.current.classList.remove('vim-scope');
     };
-  }, [helpOpen]);
+  }, [helpOpen, setCursor, setScope]);
 
   return { prefixActive, helpOpen, toggleHelp };
 }
