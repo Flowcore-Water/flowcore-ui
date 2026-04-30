@@ -48,6 +48,12 @@ export interface ThemeColors {
 }
 /** Default theme — dark navy with FlowCore Blue accents */
 export declare const defaultTheme: ThemeColors;
+/** Theme name type for multi-theme support */
+export type ThemeName = 'default' | 'retro' | 'light';
 /** Retro theme — synthwave with purple backgrounds and hot pink accents */
 export declare const retroTheme: ThemeColors;
+/** Light theme — brand-aligned light mode using official Flowcore color palette */
+export declare const lightTheme: ThemeColors;
+/** Map theme names to theme objects */
+export declare const themes: Record<ThemeName, ThemeColors>;
 //# sourceMappingURL=theme.d.ts.map

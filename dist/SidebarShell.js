@@ -1,9 +1,13 @@
 import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState } from 'react';
-import { NavLink, Link, Outlet } from 'react-router-dom';
+import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
 import { AppLauncher } from './AppLauncher';
 import { BugReportProvider, BugReportWidget, BugReportErrorBoundary } from './bugReport';
 import { VersionBanner } from './VersionBanner';
+import { ThemeDropdown } from './ThemeDropdown';
+import { useVimNav } from './useVimNav';
+import { KeyboardHelpOverlay } from './KeyboardHelpOverlay';
+import { SpotlightSearch } from './SpotlightSearch';
 import { FLOWCORE_APPS } from './appRegistry';
 /**
  * Self-contained responsive styles for the sidebar layout.
@@ -88,10 +92,65 @@ const SIDEBAR_STYLES = `
     }
   }
 `;
-export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo, themeToggle, background, topBanner, apps = FLOWCORE_APPS, bugReport, children, }) => {
+export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo, themeToggle, themeName, onThemeChange, background, topBanner, apps = FLOWCORE_APPS, bugReport, children, }) => {
     const [menuOpen, setMenuOpen] = useState(false);
+    const [launcherOpen, setLauncherOpen] = useState(false);
+    const [spotlightOpen, setSpotlightOpen] = useState(false);
+    const navigate = useNavigate();
+    // Flatten nav items to get paths for Ctrl+b 1-9 jump
+    const flatNavPaths = navItems.flatMap((entry) => 'kind' in entry && entry.kind === 'group'
+        ? entry.items.map((item) => item.to)
+        : [entry.to]);
+    const { prefixActive, helpOpen, toggleHelp } = useVimNav({
+        onCycleTheme: onThemeChange && themeName
+            ? () => {
+                const order = ['default', 'retro', 'light'];
+                const idx = order.indexOf(themeName);
+                onThemeChange(order[(idx + 1) % order.length]);
+            }
+            : undefined,
+        onToggleLeftSidebar: () => setMenuOpen((v) => !v),
+        onToggleLauncher: () => setLauncherOpen((v) => !v),
+        onToggleBugReport: () => {
+            document.dispatchEvent(new CustomEvent('flowcore:open-bug-report'));
+        },
+        onOpenSpotlight: () => setSpotlightOpen((v) => !v),
+        onNavJump: (index) => {
+            if (index < flatNavPaths.length) {
+                navigate(flatNavPaths[index]);
+                setMenuOpen(false);
+            }
+        },
+    });
     const defaultLogo = (_jsx("img", { src: "/flowcore-logo.svg", alt: "Flowcore", className: "sidebar-shell-logo" }));
-    return (_jsxs(BugReportProvider, { config: bugReport, children: [_jsx("style", { children: SIDEBAR_STYLES }), topBanner, _jsx(VersionBanner, {}), _jsxs("div", { className: "sidebar-shell-mobile-bar", style: { background: t.navBg, borderBottom: `1px solid ${t.navBorder}` }, children: [_jsx(Link, { to: "/", style: { flexShrink: 0 }, children: logo ?? defaultLogo }), _jsx("span", { style: {
+    return (_jsxs(BugReportProvider, { config: bugReport, children: [_jsx("style", { children: SIDEBAR_STYLES }), _jsx("a", { href: "#main-content", style: {
+                    position: 'fixed',
+                    top: -100,
+                    left: 16,
+                    zIndex: 9999,
+                    padding: '8px 16px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: '#fff',
+                    background: '#3794EA',
+                    borderRadius: '0 0 8px 8px',
+                    textDecoration: 'none',
+                    transition: 'top 150ms ease-out',
+                }, onFocus: (e) => { e.currentTarget.style.top = '0px'; }, onBlur: (e) => { e.currentTarget.style.top = '-100px'; }, children: "Skip to content" }), prefixActive && (_jsx("div", { style: {
+                    position: 'fixed',
+                    bottom: 16,
+                    right: 16,
+                    zIndex: 9999,
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: 'ui-monospace, monospace',
+                    color: t.accent,
+                    background: `${t.accent}20`,
+                    border: `1px solid ${t.accent}4d`,
+                    borderRadius: 8,
+                    pointerEvents: 'none',
+                }, children: "Ctrl+b ..." })), _jsx(KeyboardHelpOverlay, { open: helpOpen, onClose: toggleHelp, t: t }), topBanner, _jsx(VersionBanner, {}), _jsxs("div", { className: "sidebar-shell-mobile-bar", style: { background: t.navBg, borderBottom: `1px solid ${t.navBorder}` }, children: [_jsx(Link, { to: "/", style: { flexShrink: 0 }, children: logo ?? defaultLogo }), _jsx("span", { style: {
                             fontSize: 13,
                             fontFamily: 'ui-monospace, monospace',
                             textTransform: 'uppercase',
@@ -107,7 +166,7 @@ export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo
                                         borderRadius: 8,
                                         border: `1px solid ${t.border}`,
                                         background: t.surfaceHover,
-                                    }, children: [_jsx(AppLauncher, { apps: apps, currentAppSlug: appSlug, theme: t, dropdownAlign: "left" }), _jsx("div", { style: { width: 1, alignSelf: 'stretch', background: t.border } }), _jsx("span", { style: {
+                                    }, children: [_jsx(AppLauncher, { apps: apps, currentAppSlug: appSlug, theme: t, dropdownAlign: "left", isOpen: launcherOpen, onOpenChange: setLauncherOpen }), _jsx("div", { style: { width: 1, alignSelf: 'stretch', background: t.border } }), _jsx("span", { style: {
                                                 padding: '6px 12px',
                                                 fontSize: 12,
                                                 fontFamily: 'ui-monospace, monospace',
@@ -122,7 +181,7 @@ export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.1em',
                                                 color: t.textMuted,
-                                            }, children: entry.label }), entry.items.map((item) => (_jsx(SidebarNavItem, { to: item.to, label: item.label, icon: item.icon, theme: t, onClick: () => setMenuOpen(false) }, item.to)))] }, entry.label)) : (_jsx(SidebarNavItem, { to: entry.to, label: entry.label, icon: entry.icon, theme: t, onClick: () => setMenuOpen(false) }, entry.to))) }), _jsxs("div", { style: { padding: '12px 16px 16px', borderTop: `1px solid ${t.border}` }, children: [themeToggle && (_jsx("div", { style: { marginBottom: user ? 12 : 0 }, children: themeToggle })), user && (_jsxs("div", { children: [_jsxs("div", { style: { marginBottom: 8 }, children: [_jsx("p", { style: { fontSize: 14, fontWeight: 600, color: t.textPrimary, margin: 0 }, children: user.displayName }), _jsx("p", { style: {
+                                            }, children: entry.label }), entry.items.map((item) => (_jsx(SidebarNavItem, { to: item.to, label: item.label, icon: item.icon, theme: t, onClick: () => setMenuOpen(false) }, item.to)))] }, entry.label)) : (_jsx(SidebarNavItem, { to: entry.to, label: entry.label, icon: entry.icon, theme: t, onClick: () => setMenuOpen(false) }, entry.to))) }), _jsxs("div", { style: { padding: '12px 16px 16px', borderTop: `1px solid ${t.border}` }, children: [themeName && onThemeChange ? (_jsx("div", { style: { marginBottom: user ? 12 : 0 }, children: _jsx(ThemeDropdown, { theme: themeName, onSelect: onThemeChange, t: t }) })) : themeToggle ? (_jsx("div", { style: { marginBottom: user ? 12 : 0 }, children: themeToggle })) : null, user && (_jsxs("div", { children: [_jsxs("div", { style: { marginBottom: 8 }, children: [_jsx("p", { style: { fontSize: 14, fontWeight: 600, color: t.textPrimary, margin: 0 }, children: user.displayName }), _jsx("p", { style: {
                                                             fontSize: 11,
                                                             textTransform: 'uppercase',
                                                             letterSpacing: '0.05em',
@@ -139,7 +198,7 @@ export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo
                                                     color: t.buttonText,
                                                     cursor: 'pointer',
                                                     textAlign: 'center',
-                                                }, children: "Sign Out" })] }))] })] }), _jsxs("main", { style: { flex: 1, overflow: 'auto', position: 'relative' }, children: [background, _jsx("div", { className: "sidebar-shell-content", children: _jsx("div", { className: "sidebar-shell-content-inner", children: bugReport ? (_jsx(BugReportErrorBoundary, { config: bugReport, children: children ?? _jsx(Outlet, {}) })) : (children ?? _jsx(Outlet, {})) }) })] })] }), _jsx(BugReportWidget, {})] }));
+                                                }, children: "Sign Out" })] }))] })] }), _jsxs("main", { id: "main-content", style: { flex: 1, overflow: 'auto', position: 'relative' }, children: [background, _jsx("div", { className: "sidebar-shell-content", children: _jsx("div", { className: "sidebar-shell-content-inner", children: bugReport ? (_jsx(BugReportErrorBoundary, { config: bugReport, children: children ?? _jsx(Outlet, {}) })) : (children ?? _jsx(Outlet, {})) }) })] })] }), _jsx(BugReportWidget, {}), _jsx(SpotlightSearch, { open: spotlightOpen, onClose: () => setSpotlightOpen(false), theme: t, apps: apps, navItems: navItems, currentAppSlug: appSlug, currentAppTitle: appTitle, onNavigate: (path) => { navigate(path); setSpotlightOpen(false); } })] }));
 };
 function SidebarNavItem({ to, label, icon, theme: t, onClick, }) {
     return (_jsxs(NavLink, { to: to, onClick: onClick, style: ({ isActive }) => ({

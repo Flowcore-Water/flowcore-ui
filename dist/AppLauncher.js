@@ -1,7 +1,15 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState, useRef, useEffect } from 'react';
-export const AppLauncher = ({ apps, currentAppSlug, theme: t, dropdownAlign = 'right' }) => {
-    const [open, setOpen] = useState(false);
+export const AppLauncher = ({ apps, currentAppSlug, theme: t, dropdownAlign = 'right', isOpen, onOpenChange }) => {
+    const [internalOpen, setInternalOpen] = useState(false);
+    const open = isOpen !== undefined ? isOpen : internalOpen;
+    const setOpen = (next) => {
+        const resolved = typeof next === 'function' ? next(open) : next;
+        if (onOpenChange)
+            onOpenChange(resolved);
+        else
+            setInternalOpen(resolved);
+    };
     const containerRef = useRef(null);
     useEffect(() => {
         if (!open)

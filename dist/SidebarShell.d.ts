@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ThemeColors } from './theme';
+import type { ThemeColors, ThemeName } from './theme';
 import { type BugReportConfig } from './bugReport';
 import type { AppInfo } from './AppLauncher';
 import type { NavEntry, AppShellUser } from './AppShell';
@@ -16,8 +16,15 @@ export interface SidebarShellProps {
     user?: AppShellUser;
     /** Logo element rendered at the top of the sidebar */
     logo?: React.ReactNode;
-    /** Optional widget rendered below nav links (e.g. theme toggle) */
+    /**
+     * Optional custom widget rendered below nav links.
+     * @deprecated Pass `themeName` + `onThemeChange` instead to use the built-in ThemeDropdown.
+     */
     themeToggle?: React.ReactNode;
+    /** Current theme name — enables the built-in ThemeDropdown */
+    themeName?: ThemeName;
+    /** Theme change callback — required when using built-in ThemeDropdown */
+    onThemeChange?: (name: ThemeName) => void;
     /** Optional background layer rendered behind main content */
     background?: React.ReactNode;
     /** Banner rendered above everything */

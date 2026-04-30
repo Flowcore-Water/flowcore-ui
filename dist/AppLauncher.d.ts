@@ -12,6 +12,10 @@ export interface AppLauncherProps {
     theme: ThemeColors;
     /** Which edge of the button the dropdown aligns to. Default 'right'. */
     dropdownAlign?: 'left' | 'right';
+    /** Controlled mode: external open state */
+    isOpen?: boolean;
+    /** Controlled mode: callback when open state should change */
+    onOpenChange?: (open: boolean) => void;
 }
 export declare const AppLauncher: React.FC<AppLauncherProps>;
 //# sourceMappingURL=AppLauncher.d.ts.map
