@@ -22,4 +22,9 @@ export const FLOWCORE_APPS: AppInfo[] = [
     display_name: 'WellScope',
     url: 'https://wellscope.flowcorewater.com',
   },
+  {
+    slug: 'marketing-sensor',
+    display_name: 'Marketing Sensor',
+    url: 'https://sensor.flowcorewater.com',
+  },
 ];
