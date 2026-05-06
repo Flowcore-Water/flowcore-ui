@@ -24,6 +24,16 @@ const NAV_BINDINGS: Binding[] = [
   { keys: '?', action: 'Toggle this help' },
 ];
 
+const SELECTION_BINDINGS: Binding[] = [
+  { keys: 'x', action: 'Select / deselect row' },
+  { keys: '* a', action: 'Select all rows' },
+  { keys: '* n', action: 'Select none' },
+  { keys: ']', action: 'Preview selected row' },
+  { keys: 'e', action: 'Archive selected rows' },
+  { keys: '#', action: 'Delete selected rows' },
+  { keys: 'Esc', action: 'Clear selection' },
+];
+
 const CLIPBOARD_BINDINGS: Binding[] = [
   { keys: 'c', action: 'Copy (click copy button)' },
   { keys: 'y', action: 'Yank record to clipboard' },
@@ -31,7 +41,6 @@ const CLIPBOARD_BINDINGS: Binding[] = [
 
 const SIDEBAR_BINDINGS: Binding[] = [
   { keys: '[', action: 'Toggle left sidebar' },
-  { keys: ']', action: 'Toggle right sidebar' },
   { keys: 'Ctrl+h', action: 'Move to left sidebar' },
   { keys: 'Ctrl+l', action: 'Move to right sidebar' },
 ];
@@ -158,6 +167,9 @@ export const KeyboardHelpOverlay: React.FC<KeyboardHelpOverlayProps> = ({ open, 
 
         {/* Navigation */}
         <BindingSection label="navigation" bindings={NAV_BINDINGS} t={t} />
+
+        {/* Selection */}
+        <BindingSection label="selection" bindings={SELECTION_BINDINGS} t={t} border />
 
         {/* Clipboard */}
         <BindingSection label="clipboard" bindings={CLIPBOARD_BINDINGS} t={t} border />

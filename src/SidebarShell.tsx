@@ -157,7 +157,7 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
       : [(entry as NavItem).to],
   );
 
-  const { prefixActive, helpOpen, toggleHelp } = useVimNav({
+  const { prefixActive, starPrefixActive, helpOpen, toggleHelp } = useVimNav({
     onCycleTheme: onThemeChange && themeName
       ? () => {
           const order: ThemeName[] = ['default', 'retro', 'light'];
@@ -209,7 +209,7 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
         Skip to content
       </a>
       {/* Prefix indicator — fixed overlay, never pushes layout */}
-      {prefixActive && (
+      {(prefixActive || starPrefixActive) && (
         <div style={{
           position: 'fixed',
           bottom: 16,
@@ -225,7 +225,7 @@ export const SidebarShell: React.FC<SidebarShellProps> = ({
           borderRadius: 8,
           pointerEvents: 'none',
         }}>
-          Ctrl+b ...
+          {prefixActive ? 'Ctrl+b ...' : '* ...'}
         </div>
       )}
       {/* Keyboard help overlay */}

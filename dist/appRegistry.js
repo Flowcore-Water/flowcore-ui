@@ -20,5 +20,10 @@ export const FLOWCORE_APPS = [
         display_name: 'WellScope',
         url: 'https://wellscope.flowcorewater.com',
     },
+    {
+        slug: 'marketing-sensor',
+        display_name: 'Marketing Sensor',
+        url: 'https://marketing.flowcorewater.com',
+    },
 ];
 //# sourceMappingURL=appRegistry.js.map

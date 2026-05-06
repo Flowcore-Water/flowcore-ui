@@ -101,7 +101,7 @@ export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo
     const flatNavPaths = navItems.flatMap((entry) => 'kind' in entry && entry.kind === 'group'
         ? entry.items.map((item) => item.to)
         : [entry.to]);
-    const { prefixActive, helpOpen, toggleHelp } = useVimNav({
+    const { prefixActive, starPrefixActive, helpOpen, toggleHelp } = useVimNav({
         onCycleTheme: onThemeChange && themeName
             ? () => {
                 const order = ['default', 'retro', 'light'];
@@ -136,7 +136,7 @@ export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo
                     borderRadius: '0 0 8px 8px',
                     textDecoration: 'none',
                     transition: 'top 150ms ease-out',
-                }, onFocus: (e) => { e.currentTarget.style.top = '0px'; }, onBlur: (e) => { e.currentTarget.style.top = '-100px'; }, children: "Skip to content" }), prefixActive && (_jsx("div", { style: {
+                }, onFocus: (e) => { e.currentTarget.style.top = '0px'; }, onBlur: (e) => { e.currentTarget.style.top = '-100px'; }, children: "Skip to content" }), (prefixActive || starPrefixActive) && (_jsx("div", { style: {
                     position: 'fixed',
                     bottom: 16,
                     right: 16,
@@ -150,7 +150,7 @@ export const SidebarShell = ({ theme: t, appSlug, appTitle, navItems, user, logo
                     border: `1px solid ${t.accent}4d`,
                     borderRadius: 8,
                     pointerEvents: 'none',
-                }, children: "Ctrl+b ..." })), _jsx(KeyboardHelpOverlay, { open: helpOpen, onClose: toggleHelp, t: t }), topBanner, _jsx(VersionBanner, {}), _jsxs("div", { className: "sidebar-shell-mobile-bar", style: { background: t.navBg, borderBottom: `1px solid ${t.navBorder}` }, children: [_jsx(Link, { to: "/", style: { flexShrink: 0 }, children: logo ?? defaultLogo }), _jsx("span", { style: {
+                }, children: prefixActive ? 'Ctrl+b ...' : '* ...' })), _jsx(KeyboardHelpOverlay, { open: helpOpen, onClose: toggleHelp, t: t }), topBanner, _jsx(VersionBanner, {}), _jsxs("div", { className: "sidebar-shell-mobile-bar", style: { background: t.navBg, borderBottom: `1px solid ${t.navBorder}` }, children: [_jsx(Link, { to: "/", style: { flexShrink: 0 }, children: logo ?? defaultLogo }), _jsx("span", { style: {
                             fontSize: 13,
                             fontFamily: 'ui-monospace, monospace',
                             textTransform: 'uppercase',

@@ -17,13 +17,21 @@ import { useEffect, useCallback, useRef, useState } from 'react';
  *   /          cursor to search input
  *   ?          toggle keyboard help overlay
  *
+ * SELECTION (Gmail-style):
+ *   x          toggle select on cursored row
+ *   * a        select all rows in scope
+ *   * n        select none (clear selection)
+ *   ]          preview cursored row (opens detail panel)
+ *   e          archive selected/cursored rows (where archive button exists)
+ *   #          delete selected/cursored rows (where delete button exists)
+ *   Esc        clear selection (before exiting scope)
+ *
  * CLIPBOARD:
  *   c          copy (clicks nearest copy button on cursored element)
  *   y          yank whole record text to clipboard
  *
  * SIDEBARS:
  *   [          toggle left sidebar
- *   ]          toggle right sidebar
  *   Ctrl+h     move cursor scope to left sidebar
  *   Ctrl+l     move cursor scope to right sidebar
  *
@@ -50,7 +58,7 @@ export interface VimNavCallbacks {
   onToggleSidebar?: () => void;
   /** Called when left sidebar toggle is requested ([) */
   onToggleLeftSidebar?: () => void;
-  /** Called when right sidebar toggle is requested (]) */
+  /** Called when right sidebar toggle is requested (]) — fallback if no row is cursored */
   onToggleRightSidebar?: () => void;
   /** Called when nav item jump is requested (Ctrl+b 1-9) */
   onNavJump?: (index: number) => void;
@@ -58,15 +66,27 @@ export interface VimNavCallbacks {
   onToggleBugReport?: () => void;
   /** Called when spotlight search is requested (Ctrl/Cmd+K) */
   onOpenSpotlight?: () => void;
+  /** Called when ] is pressed on a table row — open preview panel */
+  onPreviewRow?: (rowEl: HTMLElement) => void;
+  /** Called when e is pressed — archive selected/cursored rows */
+  onArchiveRows?: (rowEls: HTMLElement[]) => void;
+  /** Called when # is pressed — delete selected/cursored rows (only if delete action exists) */
+  onDeleteRows?: (rowEls: HTMLElement[]) => void;
 }
 
 export interface VimNavState {
   /** Whether the tmux prefix (Ctrl+b) is active and awaiting next key */
   prefixActive: boolean;
+  /** Whether the * (star) prefix is waiting for a second key */
+  starPrefixActive: boolean;
   /** Whether the help overlay is showing */
   helpOpen: boolean;
   /** Toggle help overlay */
   toggleHelp: () => void;
+  /** Set of currently selected row elements */
+  selectedRows: Set<HTMLElement>;
+  /** Clear all selected rows */
+  clearSelection: () => void;
 }
 
 /* ─── Cursor style injection ───────────────────────────────────────── */
@@ -76,6 +96,25 @@ const CURSOR_CSS = `
 .vim-cursor {
   outline: 2px solid #3794EA !important;
   outline-offset: 2px;
+}
+.vim-cursor[data-vim-row] {
+  outline: none !important;
+  position: relative;
+}
+.vim-cursor[data-vim-row] > td:first-child,
+.vim-cursor[data-vim-row] > th:first-child {
+  box-shadow: inset 3px 0 0 #3794EA;
+}
+.vim-selected {
+  background: rgba(55, 148, 234, 0.08) !important;
+}
+.vim-selected > td:first-child,
+.vim-selected > th:first-child {
+  box-shadow: inset 3px 0 0 rgba(55, 148, 234, 0.4);
+}
+.vim-cursor.vim-selected > td:first-child,
+.vim-cursor.vim-selected > th:first-child {
+  box-shadow: inset 3px 0 0 #3794EA;
 }
 .vim-scope {
   outline: 1px dashed rgba(55, 148, 234, 0.35) !important;
@@ -181,6 +220,33 @@ function yankRecord(el: HTMLElement): string {
   return row.textContent?.trim() || '';
 }
 
+/* ─── Selection helpers ────────────────────────────────────────────── */
+
+/** Find the closest table row from an element */
+function findRow(el: HTMLElement): HTMLElement | null {
+  return el.closest<HTMLElement>('tr[data-vim-row], [role="row"][data-vim-row]');
+}
+
+/** Get all selectable rows in the current scope or page */
+function getSelectableRows(scope?: HTMLElement | null): HTMLElement[] {
+  const root = scope || document.querySelector('main') || document.body;
+  return Array.from(root.querySelectorAll<HTMLElement>('tr[data-vim-row], [role="row"][data-vim-row]')).filter(isVisible);
+}
+
+/** Check if a delete action exists for the given row */
+function hasDeleteAction(el: HTMLElement): boolean {
+  return !!el.querySelector<HTMLElement>(
+    'button[aria-label*="elete"], button[title*="elete"], [data-delete-action], button[aria-label*="emove"], button[title*="emove"]',
+  );
+}
+
+/** Check if an archive action exists for the given row */
+function hasArchiveAction(el: HTMLElement): boolean {
+  return !!el.querySelector<HTMLElement>(
+    'button[aria-label*="rchive"], button[title*="rchive"], [data-archive-action]',
+  );
+}
+
 /* ─── Hook ─────────────────────────────────────────────────────────── */
 
 export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
@@ -188,8 +254,12 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
   const prefixTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const gPendingRef = useRef(false);
   const gTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const starPrefixRef = useRef(false);
+  const starTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [prefixActive, setPrefixActive] = useState(false);
+  const [starPrefixActive, setStarPrefixActive] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<Set<HTMLElement>>(new Set());
   const callbacksRef = useRef(callbacks);
   callbacksRef.current = callbacks;
 
@@ -198,6 +268,44 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
   const scopeRef = useRef<HTMLElement | null>(null);
 
   const toggleHelp = useCallback(() => setHelpOpen((v) => !v), []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedRows((prev) => {
+      prev.forEach((el) => el.classList.remove('vim-selected'));
+      return new Set();
+    });
+  }, []);
+
+  const toggleRowSelection = useCallback((el: HTMLElement) => {
+    const row = findRow(el) ?? el;
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(row)) {
+        row.classList.remove('vim-selected');
+        next.delete(row);
+      } else {
+        row.classList.add('vim-selected');
+        next.add(row);
+      }
+      return next;
+    });
+  }, []);
+
+  const selectAllRows = useCallback(() => {
+    const rows = getSelectableRows(scopeRef.current);
+    setSelectedRows(() => {
+      const next = new Set<HTMLElement>();
+      rows.forEach((row) => {
+        row.classList.add('vim-selected');
+        next.add(row);
+      });
+      return next;
+    });
+  }, []);
+
+  const selectNoneRows = useCallback(() => {
+    clearSelection();
+  }, [clearSelection]);
 
   const setCursor = useCallback((el: HTMLElement | null) => {
     if (cursorRef.current) cursorRef.current.classList.remove('vim-cursor');
@@ -364,6 +472,23 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
         return;
       }
 
+      // ── Star prefix (* key for select-all/none commands) ──
+      if (starPrefixRef.current && !isInputFocused()) {
+        e.preventDefault();
+        starPrefixRef.current = false;
+        setStarPrefixActive(false);
+        if (starTimerRef.current) clearTimeout(starTimerRef.current);
+        switch (e.key) {
+          case 'a':
+            selectAllRows();
+            return;
+          case 'n':
+            selectNoneRows();
+            return;
+        }
+        return;
+      }
+
       // ── Escape: always works, even in inputs ──
       if (e.key === 'Escape') {
         if (helpOpen) {
@@ -372,6 +497,11 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
         }
         if (isInputFocused()) {
           (document.activeElement as HTMLElement)?.blur();
+          return;
+        }
+        // Clear selection first if any
+        if (selectedRows.size > 0) {
+          clearSelection();
           return;
         }
         // Exit scope first, then clear cursor
@@ -465,7 +595,57 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
 
         case ']':
           e.preventDefault();
+          // Preview the cursored row if it's a table row
+          if (cursorRef.current) {
+            const row = findRow(cursorRef.current);
+            if (row) {
+              callbacksRef.current.onPreviewRow?.(row);
+              return;
+            }
+          }
           callbacksRef.current.onToggleRightSidebar?.();
+          return;
+
+        case 'x':
+          e.preventDefault();
+          if (cursorRef.current) {
+            toggleRowSelection(cursorRef.current);
+          }
+          return;
+
+        case '*':
+          e.preventDefault();
+          starPrefixRef.current = true;
+          setStarPrefixActive(true);
+          if (starTimerRef.current) clearTimeout(starTimerRef.current);
+          starTimerRef.current = setTimeout(() => {
+            starPrefixRef.current = false;
+            setStarPrefixActive(false);
+          }, 2000);
+          return;
+
+        case 'e':
+          e.preventDefault();
+          {
+            const targets = selectedRows.size > 0
+              ? Array.from(selectedRows).filter(hasArchiveAction)
+              : cursorRef.current ? [findRow(cursorRef.current) ?? cursorRef.current].filter(hasArchiveAction) : [];
+            if (targets.length > 0) {
+              callbacksRef.current.onArchiveRows?.(targets);
+            }
+          }
+          return;
+
+        case '#':
+          e.preventDefault();
+          {
+            const targets = selectedRows.size > 0
+              ? Array.from(selectedRows).filter(hasDeleteAction)
+              : cursorRef.current ? [findRow(cursorRef.current) ?? cursorRef.current].filter(hasDeleteAction) : [];
+            if (targets.length > 0) {
+              callbacksRef.current.onDeleteRows?.(targets);
+            }
+          }
           return;
 
         case 'c':
@@ -497,10 +677,11 @@ export function useVimNav(callbacks: VimNavCallbacks = {}): VimNavState {
       document.removeEventListener('keydown', handleKeyDown);
       clearPrefix();
       clearG();
+      if (starTimerRef.current) clearTimeout(starTimerRef.current);
       if (cursorRef.current) cursorRef.current.classList.remove('vim-cursor');
       if (scopeRef.current) scopeRef.current.classList.remove('vim-scope');
     };
-  }, [helpOpen, setCursor, setScope]);
+  }, [helpOpen, selectedRows, setCursor, setScope, clearSelection, toggleRowSelection, selectAllRows, selectNoneRows]);
 
-  return { prefixActive, helpOpen, toggleHelp };
+  return { prefixActive, starPrefixActive, helpOpen, toggleHelp, selectedRows, clearSelection };
 }
