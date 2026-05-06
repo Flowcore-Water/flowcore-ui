@@ -25,6 +25,6 @@ export const FLOWCORE_APPS: AppInfo[] = [
   {
     slug: 'marketing-sensor',
     display_name: 'Marketing Sensor',
-    url: 'https://sensor.flowcorewater.com',
+    url: 'https://marketing.flowcorewater.com',
   },
 ];
