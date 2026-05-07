@@ -20,8 +20,11 @@ export interface AppLauncherProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+const GRID_COLS = 3;
+
 export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, theme: t, dropdownAlign = 'right', isOpen, onOpenChange }) => {
   const [internalOpen, setInternalOpen] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState(0);
   const open = isOpen !== undefined ? isOpen : internalOpen;
   const setOpen = (next: boolean | ((prev: boolean) => boolean)) => {
     const resolved = typeof next === 'function' ? next(open) : next;
@@ -30,6 +33,11 @@ export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, 
   };
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Reset selection when opening
+  useEffect(() => {
+    if (open) setSelectedIdx(0);
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
@@ -37,16 +45,49 @@ export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, 
         setOpen(false);
       }
     };
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setOpen(false); return; }
+
+      const move = (dx: number, dy: number) => {
+        e.preventDefault();
+        setSelectedIdx((prev) => {
+          const col = prev % GRID_COLS;
+          const row = Math.floor(prev / GRID_COLS);
+          const maxRow = Math.floor((apps.length - 1) / GRID_COLS);
+          let nextCol = col + dx;
+          let nextRow = row + dy;
+          if (nextCol < 0) nextCol = 0;
+          if (nextCol >= GRID_COLS) nextCol = GRID_COLS - 1;
+          if (nextRow < 0) nextRow = 0;
+          if (nextRow > maxRow) nextRow = maxRow;
+          const idx = nextRow * GRID_COLS + nextCol;
+          return Math.min(idx, apps.length - 1);
+        });
+      };
+
+      switch (e.key) {
+        case 'h': case 'ArrowLeft':  move(-1, 0); break;
+        case 'l': case 'ArrowRight': move(1, 0);  break;
+        case 'k': case 'ArrowUp':    move(0, -1); break;
+        case 'j': case 'ArrowDown':  move(0, 1);  break;
+        case 'Enter': {
+          e.preventDefault();
+          const app = apps[selectedIdx];
+          if (app) {
+            setOpen(false);
+            window.location.href = app.url;
+          }
+          break;
+        }
+      }
     };
     document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleKey);
     return () => {
       document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', handleKey);
     };
-  }, [open]);
+  }, [open, apps, selectedIdx]);
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
@@ -106,13 +147,15 @@ export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, 
           >
             Flowcore Apps
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {apps.map((app) => {
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`, gap: 8 }}>
+            {apps.map((app, idx) => {
               const isCurrent = app.slug === currentAppSlug;
+              const isSelected = idx === selectedIdx;
               return (
                 <a
                   key={app.slug}
                   href={app.url}
+                  onMouseEnter={() => setSelectedIdx(idx)}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -123,15 +166,9 @@ export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, 
                     textAlign: 'center',
                     textDecoration: 'none',
                     transition: 'background 150ms',
-                    background: isCurrent ? t.accentBg : 'transparent',
+                    background: isCurrent ? t.accentBg : isSelected ? t.surfaceHover : 'transparent',
                     border: 'none',
-                    boxShadow: isCurrent ? `inset 0 0 0 1px ${t.accent}` : 'none',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isCurrent) e.currentTarget.style.background = t.surfaceHover;
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isCurrent) e.currentTarget.style.background = 'transparent';
+                    boxShadow: isCurrent ? `inset 0 0 0 1px ${t.accent}` : isSelected ? `inset 0 0 0 1px ${t.border}` : 'none',
                   }}
                 >
                   <AppIcon app={app} theme={t} />
@@ -139,8 +176,8 @@ export const AppLauncher: React.FC<AppLauncherProps> = ({ apps, currentAppSlug, 
                     style={{
                       fontSize: 12,
                       lineHeight: 1.3,
-                      color: isCurrent ? t.accent : t.textSecondary,
-                      fontWeight: isCurrent ? 600 : 400,
+                      color: isCurrent ? t.accent : isSelected ? t.textPrimary : t.textSecondary,
+                      fontWeight: isCurrent || isSelected ? 600 : 400,
                     }}
                   >
                     {app.display_name}
