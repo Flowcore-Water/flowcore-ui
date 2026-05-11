@@ -105,11 +105,20 @@ const CURSOR_CSS = `
 .vim-cursor[data-vim-row] > th:first-child {
   box-shadow: inset 3px 0 0 #3794EA;
 }
+.vim-cursor[data-vim-row]:not(tr) {
+  box-shadow: inset 3px 0 0 #3794EA;
+  outline: 1px solid rgba(55, 148, 234, 0.25) !important;
+  outline-offset: 0px;
+  background: rgba(55, 148, 234, 0.06);
+}
 .vim-selected {
   background: rgba(55, 148, 234, 0.08) !important;
 }
 .vim-selected > td:first-child,
 .vim-selected > th:first-child {
+  box-shadow: inset 3px 0 0 rgba(55, 148, 234, 0.4);
+}
+.vim-selected:not(tr) {
   box-shadow: inset 3px 0 0 rgba(55, 148, 234, 0.4);
 }
 .vim-cursor.vim-selected > td:first-child,
