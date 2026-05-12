@@ -153,6 +153,7 @@ const FOCUSABLE_SELECTOR = [
   '[role="menuitem"]',
   '[role="tab"]',
   '[role="row"]',
+  '[data-vim-row]',
   'tr[style*="cursor"]',
 ].join(',');
 
