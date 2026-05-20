@@ -25,6 +25,11 @@ export const FLOWCORE_APPS: AppInfo[] = [
     url: 'https://regi.flowcorewater.com',
   },
   {
+    slug: 'st-mirror-browser',
+    display_name: 'ST Mirror',
+    url: 'https://data.flowcorewater.com',
+  },
+  {
     slug: 'training-tracker',
     display_name: 'Training',
     url: 'https://training.flowcorewater.com',
