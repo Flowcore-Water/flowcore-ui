@@ -831,14 +831,19 @@ export class BugReportErrorBoundary extends React.Component<BugReportErrorBounda
 
   render(): React.ReactNode {
     if (this.state.error) {
-      return this.props.fallback ?? (
-        <div style={{ padding: '2rem', textAlign: 'center', color: '#ef4444' }}>
-          Something went wrong. A bug report has been submitted automatically. Please refresh the page.
-        </div>
-      );
+      return this.props.fallback ?? <ErrorBoundaryFallback />;
     }
     return this.props.children;
   }
+}
+
+function ErrorBoundaryFallback() {
+  const { t } = useTheme();
+  return (
+    <div style={{ padding: '2rem', textAlign: 'center', color: t.fail }}>
+      Something went wrong. A bug report has been submitted automatically. Please refresh the page.
+    </div>
+  );
 }
 
 export function BugReportProvider({
