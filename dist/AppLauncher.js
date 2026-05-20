@@ -169,7 +169,7 @@ const AppIcon = ({ app, theme }) => {
             width: 32,
             height: 32,
             background: theme.accentDim,
-            color: '#fff',
+            color: theme.buttonText,
         }, children: initial }));
 };
 //# sourceMappingURL=AppLauncher.js.map

@@ -136,4 +136,20 @@ export const themes = {
     retro: retroTheme,
     light: lightTheme,
 };
+/**
+ * Injects theme colors as CSS custom properties on the given root element.
+ * Call this whenever the active theme changes so CSS-only rules (base.css,
+ * scrollbars, focus rings) respond to the active theme.
+ */
+export function applyThemeCSSVars(theme, root = document.documentElement) {
+    root.style.setProperty('--fc-accent', theme.accent);
+    root.style.setProperty('--fc-accent-dim', theme.accentDim);
+    root.style.setProperty('--fc-page-bg', theme.pageBg);
+    root.style.setProperty('--fc-card-bg', theme.cardBg);
+    root.style.setProperty('--fc-button-text', theme.buttonText);
+    root.style.setProperty('--fc-text-primary', theme.textPrimary);
+    root.style.setProperty('--fc-text-muted', theme.textMuted);
+    root.style.setProperty('--fc-border', theme.border);
+    root.style.setProperty('--fc-fail', theme.fail);
+}
 //# sourceMappingURL=theme.js.map
