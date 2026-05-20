@@ -249,7 +249,7 @@ const AppIcon: React.FC<AppIconProps> = ({ app, theme }) => {
         width: 32,
         height: 32,
         background: theme.accentDim,
-        color: '#fff',
+        color: theme.buttonText,
       }}
     >
       {initial}
