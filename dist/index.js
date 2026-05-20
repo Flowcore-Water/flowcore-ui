@@ -1,5 +1,6 @@
 export { ThemeProvider, useTheme } from './ThemeContext';
-export { defaultTheme, retroTheme } from './theme';
+export { defaultTheme, retroTheme, lightTheme, themes } from './theme';
+export { ThemeDropdown } from './ThemeDropdown';
 export { AppLauncher } from './AppLauncher';
 export { AppShell } from './AppShell';
 export { SidebarShell } from './SidebarShell';
@@ -9,4 +10,8 @@ export { BugReportProvider, BugReportWidget, BugReportErrorBoundary, createIdent
 export { StatCard } from './StatCard';
 export { Button } from './Button';
 export { AlertBanner } from './AlertBanner';
+export { usePageTitle } from './usePageTitle';
+export { useVimNav } from './useVimNav';
+export { KeyboardHelpOverlay } from './KeyboardHelpOverlay';
+export { SpotlightSearch } from './SpotlightSearch';
 //# sourceMappingURL=index.js.map

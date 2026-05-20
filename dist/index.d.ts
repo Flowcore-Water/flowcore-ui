@@ -1,6 +1,8 @@
 export { ThemeProvider, useTheme } from './ThemeContext';
-export type { ThemeColors } from './theme';
-export { defaultTheme, retroTheme } from './theme';
+export type { ThemeColors, ThemeName } from './theme';
+export { defaultTheme, retroTheme, lightTheme, themes } from './theme';
+export { ThemeDropdown } from './ThemeDropdown';
+export type { ThemeDropdownProps } from './ThemeDropdown';
 export { AppLauncher } from './AppLauncher';
 export type { AppInfo, AppLauncherProps } from './AppLauncher';
 export { AppShell } from './AppShell';
@@ -18,4 +20,11 @@ export { Button } from './Button';
 export type { ButtonProps } from './Button';
 export { AlertBanner } from './AlertBanner';
 export type { AlertBannerProps } from './AlertBanner';
+export { usePageTitle } from './usePageTitle';
+export { useVimNav } from './useVimNav';
+export type { VimNavCallbacks, VimNavState } from './useVimNav';
+export { KeyboardHelpOverlay } from './KeyboardHelpOverlay';
+export type { KeyboardHelpOverlayProps } from './KeyboardHelpOverlay';
+export { SpotlightSearch } from './SpotlightSearch';
+export type { SpotlightSearchProps } from './SpotlightSearch';
 //# sourceMappingURL=index.d.ts.map
