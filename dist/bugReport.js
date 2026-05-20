@@ -541,10 +541,14 @@ export class BugReportErrorBoundary extends React.Component {
     }
     render() {
         if (this.state.error) {
-            return this.props.fallback ?? (_jsx("div", { style: { padding: '2rem', textAlign: 'center', color: '#ef4444' }, children: "Something went wrong. A bug report has been submitted automatically. Please refresh the page." }));
+            return this.props.fallback ?? _jsx(ErrorBoundaryFallback, {});
         }
         return this.props.children;
     }
+}
+function ErrorBoundaryFallback() {
+    const { t } = useTheme();
+    return (_jsx("div", { style: { padding: '2rem', textAlign: 'center', color: t.fail }, children: "Something went wrong. A bug report has been submitted automatically. Please refresh the page." }));
 }
 export function BugReportProvider({ config, children, }) {
     const value = useMemo(() => {

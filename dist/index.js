@@ -1,5 +1,5 @@
 export { ThemeProvider, useTheme } from './ThemeContext';
-export { defaultTheme, retroTheme, lightTheme, themes } from './theme';
+export { defaultTheme, retroTheme, lightTheme, themes, applyThemeCSSVars } from './theme';
 export { ThemeDropdown } from './ThemeDropdown';
 export { AppLauncher } from './AppLauncher';
 export { AppShell } from './AppShell';

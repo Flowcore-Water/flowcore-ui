@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { themes, type ThemeColors, type ThemeName } from './theme';
+import { themes, applyThemeCSSVars, type ThemeColors, type ThemeName } from './theme';
 
 export type { ThemeColors, ThemeName };
 
@@ -80,6 +80,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     document.body.style.background = t.pageBg;
     document.body.style.color = t.textPrimary;
+    applyThemeCSSVars(t);
   }, [t]);
 
   return (

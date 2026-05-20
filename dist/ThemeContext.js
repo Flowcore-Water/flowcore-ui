@@ -1,6 +1,6 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { themes } from './theme';
+import { themes, applyThemeCSSVars } from './theme';
 const ThemeContext = createContext(undefined);
 const THEME_KEY = 'flowcore_theme';
 const COOKIE_DOMAIN = '.flowcorewater.com';
@@ -56,6 +56,7 @@ export const ThemeProvider = ({ children }) => {
     useEffect(() => {
         document.body.style.background = t.pageBg;
         document.body.style.color = t.textPrimary;
+        applyThemeCSSVars(t);
     }, [t]);
     return (_jsx(ThemeContext.Provider, { value: { theme, setTheme, cycleTheme, t, isRetro, toggleTheme }, children: children }));
 };

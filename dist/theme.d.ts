@@ -56,4 +56,10 @@ export declare const retroTheme: ThemeColors;
 export declare const lightTheme: ThemeColors;
 /** Map theme names to theme objects */
 export declare const themes: Record<ThemeName, ThemeColors>;
+/**
+ * Injects theme colors as CSS custom properties on the given root element.
+ * Call this whenever the active theme changes so CSS-only rules (base.css,
+ * scrollbars, focus rings) respond to the active theme.
+ */
+export declare function applyThemeCSSVars(theme: ThemeColors, root?: HTMLElement): void;
 //# sourceMappingURL=theme.d.ts.map
